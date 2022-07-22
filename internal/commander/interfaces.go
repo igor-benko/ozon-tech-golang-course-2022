@@ -12,5 +12,8 @@ type BotAPI interface {
 }
 
 type CommandHandler interface {
-	HandleCommand(msg *tgbotapi.Message)
+	Create(args ...string) string
+	Update(args ...string) string
+	Delete(args ...string) string
+	List(args ...string) string
 }

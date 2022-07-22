@@ -1,10 +1,15 @@
 package storage
 
 import (
+	"sync"
+	"sync/atomic"
+
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/entity"
 )
 
 type memoryStorage struct {
+	sync.RWMutex
+
 	kv        map[uint64]entity.Person
 	currentID uint64
 }
@@ -16,17 +21,22 @@ func NewMemoryStorage() *memoryStorage {
 }
 
 func (ms *memoryStorage) Create(item entity.Person) (uint64, error) {
+	ms.Lock()
+	defer ms.Unlock()
+
 	if _, ok := ms.kv[item.ID]; ok {
 		return 0, entity.ErrPersonAlreadyExists
 	}
 
-	ms.currentID++
-	item.ID = ms.currentID
-	ms.kv[ms.currentID] = item
-	return ms.currentID, nil
+	item.ID = ms.nextID()
+	ms.kv[item.ID] = item
+	return item.ID, nil
 }
 
 func (ms *memoryStorage) Update(item entity.Person) error {
+	ms.Lock()
+	defer ms.Unlock()
+
 	if _, ok := ms.kv[item.ID]; !ok {
 		return entity.ErrPersonNotFound
 	}
@@ -36,6 +46,9 @@ func (ms *memoryStorage) Update(item entity.Person) error {
 }
 
 func (ms *memoryStorage) Delete(personID uint64) error {
+	ms.Lock()
+	defer ms.Unlock()
+
 	if _, ok := ms.kv[personID]; !ok {
 		return entity.ErrPersonNotFound
 	}
@@ -45,10 +58,18 @@ func (ms *memoryStorage) Delete(personID uint64) error {
 }
 
 func (ms *memoryStorage) List() []entity.Person {
+	ms.RLock()
+	defer ms.RUnlock()
+
 	items := make([]entity.Person, 0, len(ms.kv))
 	for _, v := range ms.kv {
 		items = append(items, v)
 	}
 
 	return items
+}
+
+func (ms *memoryStorage) nextID() uint64 {
+	atomic.AddUint64(&ms.currentID, 1)
+	return ms.currentID
 }

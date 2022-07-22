@@ -12,7 +12,9 @@ type Config struct {
 }
 
 type TelegramConfig struct {
-	ApiKey string `yaml:"api_key" env:"TELEGRAM_API_KEY"`
+	ApiKey  string `yaml:"api_key" env:"TELEGRAM_API_KEY"`
+	Timeout int    `yaml:"timeout" env:"TELEGRAM_TIMEOUT"`
+	Offset  int    `yaml:"offset" env:"TELEGRAM_OFFSET"`
 }
 
 var cfg *Config

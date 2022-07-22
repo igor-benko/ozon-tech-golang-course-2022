@@ -1,2 +1,4 @@
 telegram:
-  api_key:
+  api_key: 
+  timeout: 60
+  offset: 0

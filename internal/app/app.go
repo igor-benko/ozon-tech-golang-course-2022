@@ -9,7 +9,6 @@ import (
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/commander"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/handlers"
-	"gitlab.ozon.dev/igor.benko.1991/homework/internal/service"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/storage"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -27,11 +26,8 @@ func Run() {
 	// Инициализация хранилища
 	memoryStorage := storage.NewMemoryStorage()
 
-	// Инициализация сервисов
-	personService := service.NewPersonService(memoryStorage)
-
 	// Инициализация обработчиков команд
-	personHandler := handlers.NewPersonHandler(bot, personService)
+	personHandler := handlers.NewPersonHandler(memoryStorage)
 
 	// Запуск бота
 	commander := commander.NewCommander(bot, personHandler)

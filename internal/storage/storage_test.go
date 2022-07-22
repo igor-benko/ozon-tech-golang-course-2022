@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,4 +46,66 @@ func TestStorage(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(items))
+}
+
+func TestStorageConcurent(t *testing.T) {
+	s := NewMemoryStorage()
+	wg := &sync.WaitGroup{}
+
+	for i := 1; i < 1000; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			_, err := s.Create(entity.Person{
+				LastName:  "C",
+				FirstName: "D",
+			})
+
+			assert.NoError(t, err)
+		}()
+	}
+
+	wg.Wait()
+
+	for i := 1; i < 1000; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+
+			err := s.Update(entity.Person{
+				ID:        uint64(id),
+				LastName:  "C",
+				FirstName: "D",
+			})
+
+			assert.NoError(t, err)
+		}(i)
+	}
+
+	wg.Wait()
+
+	for i := 1; i < 1000; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+
+			items := s.List()
+			assert.Equal(t, 999, len(items))
+		}(i)
+	}
+
+	wg.Wait()
+
+	for i := 1; i < 1000; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+
+			err := s.Delete(uint64(id))
+			assert.NoError(t, err)
+		}(i)
+	}
+
+	wg.Wait()
 }

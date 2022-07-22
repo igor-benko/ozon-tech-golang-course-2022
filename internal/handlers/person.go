@@ -3,129 +3,84 @@ package handlers
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/entity"
 )
 
 type personHandler struct {
-	api    BotAPI
-	person PersonService
+	storage Storage
 }
 
-func NewPersonHandler(api BotAPI, person PersonService) *personHandler {
+func NewPersonHandler(storage Storage) *personHandler {
 	return &personHandler{
-		api:    api,
-		person: person,
+		storage: storage,
 	}
 }
 
-func (c *personHandler) HandleCommand(msg *tgbotapi.Message) {
-	args := strings.Split(msg.CommandArguments(), " ")
-	if len(args) == 0 {
-		c.unsupported(msg)
-		return
-	}
-
-	switch args[0] {
-	case "create":
-		c.create(msg)
-	case "update":
-		c.update(msg)
-	case "delete":
-		c.delete(msg)
-	case "list":
-		c.list(msg)
-	default:
-		c.unsupported(msg)
-	}
-}
-
-func (c *personHandler) create(inputMessage *tgbotapi.Message) {
-	args := strings.Split(inputMessage.CommandArguments(), " ")
+func (c *personHandler) Create(args ...string) string {
 	if len(args) != 3 {
-		msg := tgbotapi.NewMessage(inputMessage.Chat.ID, "Неправильный формат. Должно быть /person create фамилия имя")
-		c.api.Send(msg)
-		return
+		// msg := tgbotapi.NewMessage(inputMessage.Chat.ID, "Неправильный формат. Должно быть /person create фамилия имя")
+		// c.api.Send(msg)
+		return "Неправильный формат. Должно быть /person create фамилия имя"
 	}
 
-	id, err := c.person.Create(entity.Person{
+	id, err := c.storage.Create(entity.Person{
 		LastName:  args[1],
 		FirstName: args[2],
 	})
 
 	if err != nil {
-		msg := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf("Ошибка создания персоны: %s", err))
-		c.api.Send(msg)
-		return
+		return fmt.Sprintf("Ошибка создания персоны: %s", err)
 	}
 
-	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf("Создана персона с ID: %d", id))
-	c.api.Send(msg)
+	return fmt.Sprintf("Создана персона с ID: %d", id)
 }
 
-func (c *personHandler) update(inputMessage *tgbotapi.Message) {
-	args := strings.Split(inputMessage.CommandArguments(), " ")
+func (c *personHandler) Update(args ...string) string {
 	if len(args) != 4 {
-		msg := tgbotapi.NewMessage(inputMessage.Chat.ID, "Неправильный формат. Должно быть /person update id фамилия имя")
-		c.api.Send(msg)
-		return
+		return "Неправильный формат. Должно быть /person update id фамилия имя"
 	}
 
 	id, err := strconv.Atoi(args[1])
 	if err != nil {
-		msg := tgbotapi.NewMessage(inputMessage.Chat.ID, "Неправильный формат идентификатора")
-		c.api.Send(msg)
-		return
+		return "Неправильный формат идентификатора"
 	}
 
-	err = c.person.Update(entity.Person{
+	err = c.storage.Update(entity.Person{
 		ID:        uint64(id),
 		LastName:  args[2],
 		FirstName: args[3],
 	})
 
 	if err != nil {
-		msg := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf("Ошибка создания персоны: %s", err))
-		c.api.Send(msg)
-		return
+		return fmt.Sprintf("Ошибка создания персоны: %s", err)
 	}
 
-	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf("Обновлена персона с ID: %d", id))
-	c.api.Send(msg)
+	return fmt.Sprintf("Обновлена персона с ID: %d", id)
 }
 
-func (c *personHandler) delete(inputMessage *tgbotapi.Message) {
-	args := strings.Split(inputMessage.CommandArguments(), " ")
+func (c *personHandler) Delete(args ...string) string {
 	if len(args) != 2 {
-		msg := tgbotapi.NewMessage(inputMessage.Chat.ID, "Неправильный формат. Должно быть /person delete id")
-		c.api.Send(msg)
-		return
+		return "Неправильный формат. Должно быть /person delete id"
 	}
 
 	id, err := strconv.Atoi(args[1])
 	if err != nil {
-		msg := tgbotapi.NewMessage(inputMessage.Chat.ID, "Неправильный формат идентификатора")
-		c.api.Send(msg)
-		return
+		return "Неправильный формат идентификатора"
 	}
 
-	err = c.person.Delete(uint64(id))
+	err = c.storage.Delete(uint64(id))
 
 	if err != nil {
-		msg := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf("Ошибка удаления персоны: %s", err))
-		c.api.Send(msg)
-		return
+		return fmt.Sprintf("Ошибка удаления персоны: %s", err)
 	}
 
-	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, fmt.Sprintf("Удалена персона с ID: %d", id))
-	c.api.Send(msg)
+	return fmt.Sprintf("Удалена персона с ID: %d", id)
 }
 
-func (c *personHandler) list(inputMessage *tgbotapi.Message) {
+func (c *personHandler) List(args ...string) string {
 	outputMessage := ""
-	items := c.person.List()
+	items := c.storage.List()
 	if len(items) == 0 {
 		outputMessage = "Персон нет"
 	} else {
@@ -134,11 +89,5 @@ func (c *personHandler) list(inputMessage *tgbotapi.Message) {
 		}
 	}
 
-	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, outputMessage)
-	c.api.Send(msg)
-}
-
-func (c *personHandler) unsupported(inputMessage *tgbotapi.Message) {
-	msg := tgbotapi.NewMessage(inputMessage.Chat.ID, "Неизвестная команда")
-	c.api.Send(msg)
+	return outputMessage
 }
