@@ -8,7 +8,19 @@ import (
 )
 
 type Config struct {
+	Grpc     GrpcConfig     `yaml:"grpc"`
+	Storage  StorageConfig  `yaml:"storage"`
 	Telegram TelegramConfig `yaml:"telegram"`
+}
+
+type GrpcConfig struct {
+	Port        int `yaml:"port" env:"GRPC_PORT"`
+	GatewayPort int `yaml:"gateway_port" env:"GRPC_GATEWAY_PORT"`
+}
+
+type StorageConfig struct {
+	PoolSize  int `yaml:"pool_size" env:"STORAGE_POOL_SIZE"`
+	TimeoutMs int `yaml:"timeout_ms" env:"STORAGE_TIMEOUT_MS"`
 }
 
 type TelegramConfig struct {

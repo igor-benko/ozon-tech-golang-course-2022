@@ -1,7 +1,9 @@
 package commander
 
 import (
+	"context"
 	"strings"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
@@ -65,17 +67,20 @@ func (c *commander) handleCommand(inputMessage *tgbotapi.Message) {
 }
 
 func handleAction(h CommandHandler, args ...string) string {
+	cfg := config.Get()
+	ctx, _ := context.WithTimeout(context.Background(), time.Duration(cfg.Storage.TimeoutMs*int(time.Millisecond)))
+
 	action := args[0]
 
 	switch action {
 	case "create":
-		return h.Create(args...)
+		return h.Create(ctx, args...)
 	case "update":
-		return h.Update(args...)
+		return h.Update(ctx, args...)
 	case "delete":
-		return h.Delete(args...)
+		return h.Delete(ctx, args...)
 	case "list":
-		return h.List(args...)
+		return h.List(ctx, args...)
 	}
 
 	return "Неподдерживаемая команда"

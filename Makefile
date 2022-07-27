@@ -3,11 +3,11 @@ LOCAL_BIN := $(CURDIR)/bin
 bin-deps:
 	mkdir -p $(LOCAL_BIN)
 
-	ls $(LOCAL_BIN)/goimports &> /dev/null || \
-		GOBIN=$(LOCAL_BIN) go install golang.org/x/tools/cmd/goimports@v0.1.9
-
-	ls $(LOCAL_BIN)/golangci-lint &> /dev/null || \
-		GOBIN=$(LOCAL_BIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.47.1
+	go install google.golang.org/protobuf/cmd/protoc-gen-go
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
+	go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway
+	go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2
+	go install github.com/bufbuild/buf/cmd/buf@v1.6.0
 
 lint: bin-deps
 	$(CURDIR)/bin/golangci-lint run \
@@ -34,7 +34,14 @@ precommit: bin-deps tidy imports lint test
 
 .PHONY: imports precommit test tidy bin-deps lint
 
-run:
+run-bot:
 	go mod tidy && \
-	go run cmd/bot/main.go
-.PHONY: run
+	go build -o bot ./cmd/bot && \
+	./bot
+.PHONY: run-bot
+
+run-server:
+	go mod tidy && \
+	go build -o server ./cmd/server && \
+	./server
+.PHONY: run-server

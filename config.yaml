@@ -1,3 +1,9 @@
+grpc:
+  port: 8080
+  gateway_port: 8081
+storage:
+  pool_size: 10
+  timeout_ms: 1000
 telegram:
   api_key: 
   timeout: 60
