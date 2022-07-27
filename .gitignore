@@ -1,5 +1,5 @@
 .vscode
-app
-server
-bot
+/app
+/server
+/bot
 bin
