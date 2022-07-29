@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"gitlab.ozon.dev/igor.benko.1991/homework/docs"
-
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/service"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/storage"
@@ -29,7 +28,7 @@ import (
 )
 
 const (
-	_shotdownTimeout = 5 * time.Second
+	shotdownTimeout = 5 * time.Second
 )
 
 func Run(cfg config.Config) {
@@ -79,7 +78,7 @@ func Run(cfg config.Config) {
 	}
 
 	// Даем 5 сек на обработку текущих запросов
-	ctx, cancel = context.WithTimeout(context.Background(), _shotdownTimeout)
+	ctx, cancel = context.WithTimeout(context.Background(), shotdownTimeout)
 	defer cancel()
 
 	if err := gatewayServer.Shutdown(ctx); err != nil {

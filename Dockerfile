@@ -7,5 +7,4 @@ RUN go build -o server ./cmd/server
 FROM alpine
 WORKDIR /app
 COPY --from=GO_BUILD /app/server ./
-RUN ls
 ENTRYPOINT ["./server"]

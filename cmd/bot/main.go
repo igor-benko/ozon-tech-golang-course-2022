@@ -8,9 +8,10 @@ import (
 )
 
 func main() {
-	if err := config.Init(); err != nil {
+	cfg, err := config.Init()
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	bot.Run()
+	bot.Run(*cfg)
 }
