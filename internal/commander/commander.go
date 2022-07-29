@@ -12,20 +12,20 @@ import (
 type commander struct {
 	api    BotAPI
 	person CommandHandler
+	cfg    config.Config
 }
 
-func NewCommander(api BotAPI, person CommandHandler) commander {
+func NewCommander(api BotAPI, person CommandHandler, cfg config.Config) commander {
 	return commander{
 		api:    api,
 		person: person,
+		cfg:    cfg,
 	}
 }
 
 func (c *commander) Run() {
-	cfg := config.Get()
-
-	u := tgbotapi.NewUpdate(cfg.Telegram.Offset)
-	u.Timeout = cfg.Telegram.Timeout
+	u := tgbotapi.NewUpdate(c.cfg.Telegram.Offset)
+	u.Timeout = c.cfg.Telegram.Timeout
 
 	updates := c.api.GetUpdatesChan(u)
 
@@ -52,9 +52,12 @@ func (c *commander) handleCommand(inputMessage *tgbotapi.Message) {
 		return
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(c.cfg.Storage.TimeoutMs)*time.Millisecond)
+	defer cancel()
+
 	switch command {
 	case "person":
-		outputMessage = handleAction(c.person, args...)
+		outputMessage = handleAction(ctx, c.person, args...)
 	// В случае появления новых сущностей - добавляем их тут
 	// case "order":
 	// 	outputMessage = handleAction(c.order, args...)
@@ -66,10 +69,7 @@ func (c *commander) handleCommand(inputMessage *tgbotapi.Message) {
 	c.api.Send(msg)
 }
 
-func handleAction(h CommandHandler, args ...string) string {
-	cfg := config.Get()
-	ctx, _ := context.WithTimeout(context.Background(), time.Duration(cfg.Storage.TimeoutMs*int(time.Millisecond)))
-
+func handleAction(ctx context.Context, h CommandHandler, args ...string) string {
 	action := args[0]
 
 	switch action {

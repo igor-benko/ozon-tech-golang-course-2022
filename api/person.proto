@@ -4,6 +4,7 @@ package ozon.dev.homework.api;
 option go_package = "gitlab.ozon.dev/igor.benko.1991/homework/pkg/api;api";
 
 import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
 
 service PersonService {
     rpc CreatePerson(CreatePersonRequest) returns (CreatePersonResponse) {
@@ -12,13 +13,13 @@ service PersonService {
             body: "*"
         };
     }
-    rpc UpdatePerson(UpdatePersonRequest) returns (UpdatePersonResponse) {
+    rpc UpdatePerson(UpdatePersonRequest) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             put: "/v1/persons"
             body: "*"
         };
     }
-    rpc DeletePerson(DeletePersonRequest) returns (DeletePersonResponse) {
+    rpc DeletePerson(DeletePersonRequest) returns (google.protobuf.Empty) {
         option (google.api.http) = {
             delete: "/v1/persons/{id}"
         };
@@ -28,7 +29,7 @@ service PersonService {
             get: "/v1/persons/{id}"
         };
     }
-    rpc ListPerson(ListPersonRequest) returns (ListPersonResponse) {
+    rpc ListPerson(google.protobuf.Empty) returns (ListPersonResponse) {
         option (google.api.http) = {
             get: "/v1/persons"
         };
@@ -59,15 +60,9 @@ message UpdatePersonRequest {
     string first_name = 3;
 }
 
-message UpdatePersonResponse {
-}
-
 // Delete person
 message DeletePersonRequest {
     uint64 id = 1;
-}
-
-message DeletePersonResponse {
 }
 
 // Get person
@@ -80,9 +75,6 @@ message GetPersonResponse {
 }
 
 // List persons
-message ListPersonRequest {
-}
-
 message ListPersonResponse {
     repeated Person persons = 1;
 }

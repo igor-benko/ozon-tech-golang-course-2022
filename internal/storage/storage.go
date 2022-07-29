@@ -17,10 +17,10 @@ type memoryStorage struct {
 	pool      chan struct{}
 }
 
-func NewMemoryStorage() *memoryStorage {
+func NewMemoryStorage(cfg config.StorageConfig) *memoryStorage {
 	return &memoryStorage{
 		kv:   make(map[uint64]entity.Person),
-		pool: make(chan struct{}, config.Get().Storage.PoolSize),
+		pool: make(chan struct{}, cfg.PoolSize),
 	}
 }
 

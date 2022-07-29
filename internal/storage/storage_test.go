@@ -7,12 +7,19 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/entity"
 )
 
+var storageConfig = config.StorageConfig{
+	PoolSize: 10,
+}
+
 func TestStorage(t *testing.T) {
-	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
-	s := NewMemoryStorage()
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	s := NewMemoryStorage(storageConfig)
 
 	// Тест создания
 	id, err := s.Create(ctx, entity.Person{
@@ -40,20 +47,24 @@ func TestStorage(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	items, _ := s.List(ctx)
+	items, err := s.List(ctx)
+	assert.NoError(t, err)
 	assert.Equal(t, 1, len(items))
 
 	// Тест удаления
 	err = s.Delete(ctx, 1)
-	items, _ = s.List(ctx)
+	assert.NoError(t, err)
 
+	items, err = s.List(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(items))
 }
 
 func TestStorageConcurent(t *testing.T) {
-	ctx, _ := context.WithTimeout(context.Background(), 1*time.Second)
-	s := NewMemoryStorage()
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	s := NewMemoryStorage(storageConfig)
 	wg := &sync.WaitGroup{}
 
 	for i := 1; i < 1000; i++ {
@@ -94,7 +105,8 @@ func TestStorageConcurent(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 
-			items, _ := s.List(ctx)
+			items, err := s.List(ctx)
+			assert.NoError(t, err)
 			assert.Equal(t, 999, len(items))
 		}(i)
 	}

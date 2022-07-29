@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"gitlab.ozon.dev/igor.benko.1991/homework/docs"
+
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/service"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/storage"
@@ -26,17 +28,16 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-const _shotdownTimeout = 5 * time.Second
+const (
+	_shotdownTimeout = 5 * time.Second
+)
 
-func Run() {
-	cfg := config.Get()
-	ctx, cancel := context.WithCancel(context.Background())
-
+func Run(cfg config.Config) {
 	// Инициализация хранилища
-	memoryStorage := storage.NewMemoryStorage()
+	memoryStorage := storage.NewMemoryStorage(cfg.Storage)
 
 	// Инициализация сервиса
-	personService := service.NewPersonService(memoryStorage)
+	personService := service.NewPersonService(memoryStorage, cfg)
 
 	// GRPC
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Grpc.Port))
@@ -47,6 +48,7 @@ func Run() {
 	grpcServer := grpc.NewServer()
 	pb.RegisterPersonServiceServer(grpcServer, &personService)
 
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		log.Println("Grpc started!")
 		if err = grpcServer.Serve(listener); err != nil {
@@ -102,9 +104,13 @@ func createGatewayServer(grpcPort, httpPort int) *http.Server {
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
+	router.RemoveExtraSlash = true
+
 	router.Group("v1/*{grpc_gateway}").Any("", gin.WrapH(mux))
-	router.StaticFile("/docs/person.swagger.json", "./docs/person.swagger.json")
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL("/docs/person.swagger.json")))
+
+	router.StaticFS(docs.SwaggerFileName, http.FS(docs.SwaggerFile))
+	router.StaticFileFS(docs.SwaggerFileName, docs.SwaggerFileName, http.FS(docs.SwaggerFile))
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, ginSwagger.URL(fmt.Sprintf("/%s", docs.SwaggerFileName))))
 
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%d", httpPort),

@@ -11,22 +11,25 @@ import (
 	pb "gitlab.ozon.dev/igor.benko.1991/homework/pkg/api"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 type personService struct {
 	pb.UnimplementedPersonServiceServer
 
 	storage storage.Storage
+	cfg     config.Config
 }
 
-func NewPersonService(storage storage.Storage) personService {
+func NewPersonService(storage storage.Storage, cfg config.Config) personService {
 	return personService{
 		storage: storage,
+		cfg:     cfg,
 	}
 }
 
 func (s *personService) CreatePerson(ctx context.Context, req *pb.CreatePersonRequest) (*pb.CreatePersonResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(config.Get().Storage.TimeoutMs*int(time.Millisecond)))
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Storage.TimeoutMs)*time.Millisecond)
 	defer cancel()
 
 	id, err := s.storage.Create(ctx, entity.Person{
@@ -41,8 +44,8 @@ func (s *personService) CreatePerson(ctx context.Context, req *pb.CreatePersonRe
 		Id: id,
 	}, nil
 }
-func (s *personService) UpdatePerson(ctx context.Context, req *pb.UpdatePersonRequest) (*pb.UpdatePersonResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(config.Get().Storage.TimeoutMs*int(time.Millisecond)))
+func (s *personService) UpdatePerson(ctx context.Context, req *pb.UpdatePersonRequest) (*emptypb.Empty, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Storage.TimeoutMs)*time.Millisecond)
 	defer cancel()
 
 	err := s.storage.Update(ctx, entity.Person{
@@ -54,10 +57,10 @@ func (s *personService) UpdatePerson(ctx context.Context, req *pb.UpdatePersonRe
 		return nil, handleError(err)
 	}
 
-	return &pb.UpdatePersonResponse{}, nil
+	return &emptypb.Empty{}, nil
 }
-func (s *personService) DeletePerson(ctx context.Context, req *pb.DeletePersonRequest) (*pb.DeletePersonResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(config.Get().Storage.TimeoutMs*int(time.Millisecond)))
+func (s *personService) DeletePerson(ctx context.Context, req *pb.DeletePersonRequest) (*emptypb.Empty, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Storage.TimeoutMs)*time.Millisecond)
 	defer cancel()
 
 	err := s.storage.Delete(ctx, req.GetId())
@@ -65,10 +68,10 @@ func (s *personService) DeletePerson(ctx context.Context, req *pb.DeletePersonRe
 		return nil, handleError(err)
 	}
 
-	return &pb.DeletePersonResponse{}, nil
+	return &emptypb.Empty{}, nil
 }
 func (s *personService) GetPerson(ctx context.Context, req *pb.GetPersonRequest) (*pb.GetPersonResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(config.Get().Storage.TimeoutMs*int(time.Millisecond)))
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Storage.TimeoutMs)*time.Millisecond)
 	defer cancel()
 
 	person, err := s.storage.Get(ctx, req.GetId())
@@ -84,13 +87,13 @@ func (s *personService) GetPerson(ctx context.Context, req *pb.GetPersonRequest)
 		},
 	}, nil
 }
-func (s *personService) ListPerson(ctx context.Context, req *pb.ListPersonRequest) (*pb.ListPersonResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(config.Get().Storage.TimeoutMs*int(time.Millisecond)))
+func (s *personService) ListPerson(ctx context.Context, req *emptypb.Empty) (*pb.ListPersonResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Storage.TimeoutMs)*time.Millisecond)
 	defer cancel()
 
 	persons, err := s.storage.List(ctx)
 	if err != nil {
-		return nil, err
+		return nil, handleError(err)
 	}
 
 	pbPersons := make([]*pb.Person, len(persons))

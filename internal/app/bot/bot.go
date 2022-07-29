@@ -13,9 +13,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func Run() {
-	cfg := config.Get()
-
+func Run(cfg config.Config) {
 	bot, err := tgbotapi.NewBotAPI(cfg.Telegram.ApiKey)
 	if err != nil {
 		log.Fatal(err)
@@ -23,13 +21,13 @@ func Run() {
 	bot.Debug = true
 
 	// Инициализация хранилища
-	memoryStorage := storage.NewMemoryStorage()
+	memoryStorage := storage.NewMemoryStorage(cfg.Storage)
 
 	// Инициализация обработчиков команд
 	personHandler := commander.NewPersonHandler(memoryStorage)
 
 	// Запуск бота
-	commander := commander.NewCommander(bot, personHandler)
+	commander := commander.NewCommander(bot, personHandler, cfg)
 	go commander.Run()
 
 	log.Println("Bot started!")

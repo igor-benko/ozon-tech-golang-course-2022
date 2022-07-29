@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -23,10 +24,10 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PersonServiceClient interface {
 	CreatePerson(ctx context.Context, in *CreatePersonRequest, opts ...grpc.CallOption) (*CreatePersonResponse, error)
-	UpdatePerson(ctx context.Context, in *UpdatePersonRequest, opts ...grpc.CallOption) (*UpdatePersonResponse, error)
-	DeletePerson(ctx context.Context, in *DeletePersonRequest, opts ...grpc.CallOption) (*DeletePersonResponse, error)
+	UpdatePerson(ctx context.Context, in *UpdatePersonRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeletePerson(ctx context.Context, in *DeletePersonRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetPerson(ctx context.Context, in *GetPersonRequest, opts ...grpc.CallOption) (*GetPersonResponse, error)
-	ListPerson(ctx context.Context, in *ListPersonRequest, opts ...grpc.CallOption) (*ListPersonResponse, error)
+	ListPerson(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListPersonResponse, error)
 }
 
 type personServiceClient struct {
@@ -46,8 +47,8 @@ func (c *personServiceClient) CreatePerson(ctx context.Context, in *CreatePerson
 	return out, nil
 }
 
-func (c *personServiceClient) UpdatePerson(ctx context.Context, in *UpdatePersonRequest, opts ...grpc.CallOption) (*UpdatePersonResponse, error) {
-	out := new(UpdatePersonResponse)
+func (c *personServiceClient) UpdatePerson(ctx context.Context, in *UpdatePersonRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/ozon.dev.homework.api.PersonService/UpdatePerson", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -55,8 +56,8 @@ func (c *personServiceClient) UpdatePerson(ctx context.Context, in *UpdatePerson
 	return out, nil
 }
 
-func (c *personServiceClient) DeletePerson(ctx context.Context, in *DeletePersonRequest, opts ...grpc.CallOption) (*DeletePersonResponse, error) {
-	out := new(DeletePersonResponse)
+func (c *personServiceClient) DeletePerson(ctx context.Context, in *DeletePersonRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/ozon.dev.homework.api.PersonService/DeletePerson", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -73,7 +74,7 @@ func (c *personServiceClient) GetPerson(ctx context.Context, in *GetPersonReques
 	return out, nil
 }
 
-func (c *personServiceClient) ListPerson(ctx context.Context, in *ListPersonRequest, opts ...grpc.CallOption) (*ListPersonResponse, error) {
+func (c *personServiceClient) ListPerson(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListPersonResponse, error) {
 	out := new(ListPersonResponse)
 	err := c.cc.Invoke(ctx, "/ozon.dev.homework.api.PersonService/ListPerson", in, out, opts...)
 	if err != nil {
@@ -87,10 +88,10 @@ func (c *personServiceClient) ListPerson(ctx context.Context, in *ListPersonRequ
 // for forward compatibility
 type PersonServiceServer interface {
 	CreatePerson(context.Context, *CreatePersonRequest) (*CreatePersonResponse, error)
-	UpdatePerson(context.Context, *UpdatePersonRequest) (*UpdatePersonResponse, error)
-	DeletePerson(context.Context, *DeletePersonRequest) (*DeletePersonResponse, error)
+	UpdatePerson(context.Context, *UpdatePersonRequest) (*emptypb.Empty, error)
+	DeletePerson(context.Context, *DeletePersonRequest) (*emptypb.Empty, error)
 	GetPerson(context.Context, *GetPersonRequest) (*GetPersonResponse, error)
-	ListPerson(context.Context, *ListPersonRequest) (*ListPersonResponse, error)
+	ListPerson(context.Context, *emptypb.Empty) (*ListPersonResponse, error)
 	mustEmbedUnimplementedPersonServiceServer()
 }
 
@@ -101,16 +102,16 @@ type UnimplementedPersonServiceServer struct {
 func (UnimplementedPersonServiceServer) CreatePerson(context.Context, *CreatePersonRequest) (*CreatePersonResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreatePerson not implemented")
 }
-func (UnimplementedPersonServiceServer) UpdatePerson(context.Context, *UpdatePersonRequest) (*UpdatePersonResponse, error) {
+func (UnimplementedPersonServiceServer) UpdatePerson(context.Context, *UpdatePersonRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdatePerson not implemented")
 }
-func (UnimplementedPersonServiceServer) DeletePerson(context.Context, *DeletePersonRequest) (*DeletePersonResponse, error) {
+func (UnimplementedPersonServiceServer) DeletePerson(context.Context, *DeletePersonRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeletePerson not implemented")
 }
 func (UnimplementedPersonServiceServer) GetPerson(context.Context, *GetPersonRequest) (*GetPersonResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPerson not implemented")
 }
-func (UnimplementedPersonServiceServer) ListPerson(context.Context, *ListPersonRequest) (*ListPersonResponse, error) {
+func (UnimplementedPersonServiceServer) ListPerson(context.Context, *emptypb.Empty) (*ListPersonResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPerson not implemented")
 }
 func (UnimplementedPersonServiceServer) mustEmbedUnimplementedPersonServiceServer() {}
@@ -199,7 +200,7 @@ func _PersonService_GetPerson_Handler(srv interface{}, ctx context.Context, dec 
 }
 
 func _PersonService_ListPerson_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListPersonRequest)
+	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -211,7 +212,7 @@ func _PersonService_ListPerson_Handler(srv interface{}, ctx context.Context, dec
 		FullMethod: "/ozon.dev.homework.api.PersonService/ListPerson",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PersonServiceServer).ListPerson(ctx, req.(*ListPersonRequest))
+		return srv.(PersonServiceServer).ListPerson(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
