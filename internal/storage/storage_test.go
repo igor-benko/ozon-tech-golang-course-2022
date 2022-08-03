@@ -1,18 +1,28 @@
 package storage
 
 import (
+	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/entity"
 )
 
+var storageConfig = config.StorageConfig{
+	PoolSize: 10,
+}
+
 func TestStorage(t *testing.T) {
-	s := NewMemoryStorage()
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	s := NewMemoryStorage(storageConfig)
 
 	// Тест создания
-	id, err := s.Create(entity.Person{
+	id, err := s.Create(ctx, entity.Person{
 		LastName:  "A",
 		FirstName: "B",
 	})
@@ -20,7 +30,7 @@ func TestStorage(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, id, uint64(1))
 
-	_, err = s.Create(entity.Person{
+	_, err = s.Create(ctx, entity.Person{
 		ID:        1,
 		LastName:  "A",
 		FirstName: "B",
@@ -29,7 +39,7 @@ func TestStorage(t *testing.T) {
 	assert.Error(t, err)
 
 	// Тест обновления
-	err = s.Update(entity.Person{
+	err = s.Update(ctx, entity.Person{
 		ID:        1,
 		LastName:  "C",
 		FirstName: "D",
@@ -37,19 +47,24 @@ func TestStorage(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	items := s.List()
+	items, err := s.List(ctx)
+	assert.NoError(t, err)
 	assert.Equal(t, 1, len(items))
 
 	// Тест удаления
-	err = s.Delete(1)
-	items = s.List()
+	err = s.Delete(ctx, 1)
+	assert.NoError(t, err)
 
+	items, err = s.List(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(items))
 }
 
 func TestStorageConcurent(t *testing.T) {
-	s := NewMemoryStorage()
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	s := NewMemoryStorage(storageConfig)
 	wg := &sync.WaitGroup{}
 
 	for i := 1; i < 1000; i++ {
@@ -57,7 +72,7 @@ func TestStorageConcurent(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			_, err := s.Create(entity.Person{
+			_, err := s.Create(ctx, entity.Person{
 				LastName:  "C",
 				FirstName: "D",
 			})
@@ -73,7 +88,7 @@ func TestStorageConcurent(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 
-			err := s.Update(entity.Person{
+			err := s.Update(ctx, entity.Person{
 				ID:        uint64(id),
 				LastName:  "C",
 				FirstName: "D",
@@ -90,7 +105,8 @@ func TestStorageConcurent(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 
-			items := s.List()
+			items, err := s.List(ctx)
+			assert.NoError(t, err)
 			assert.Equal(t, 999, len(items))
 		}(i)
 	}
@@ -102,7 +118,7 @@ func TestStorageConcurent(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 
-			err := s.Delete(uint64(id))
+			err := s.Delete(ctx, uint64(id))
 			assert.NoError(t, err)
 		}(i)
 	}

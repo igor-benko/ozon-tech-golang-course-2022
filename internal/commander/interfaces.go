@@ -1,6 +1,8 @@
 package commander
 
 import (
+	"context"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
@@ -12,8 +14,8 @@ type BotAPI interface {
 }
 
 type CommandHandler interface {
-	Create(args ...string) string
-	Update(args ...string) string
-	Delete(args ...string) string
-	List(args ...string) string
+	Create(ctx context.Context, args ...string) string
+	Update(ctx context.Context, args ...string) string
+	Delete(ctx context.Context, args ...string) string
+	List(ctx context.Context, args ...string) string
 }

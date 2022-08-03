@@ -1,4 +1,4 @@
-package app
+package bot
 
 import (
 	"log"
@@ -8,15 +8,12 @@ import (
 
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/commander"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
-	"gitlab.ozon.dev/igor.benko.1991/homework/internal/handlers"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/storage"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-func Run() {
-	cfg := config.Get()
-
+func Run(cfg config.Config) {
 	bot, err := tgbotapi.NewBotAPI(cfg.Telegram.ApiKey)
 	if err != nil {
 		log.Fatal(err)
@@ -24,13 +21,13 @@ func Run() {
 	bot.Debug = true
 
 	// Инициализация хранилища
-	memoryStorage := storage.NewMemoryStorage()
+	memoryStorage := storage.NewMemoryStorage(cfg.Storage)
 
 	// Инициализация обработчиков команд
-	personHandler := handlers.NewPersonHandler(memoryStorage)
+	personHandler := commander.NewPersonHandler(memoryStorage)
 
 	// Запуск бота
-	commander := commander.NewCommander(bot, personHandler)
+	commander := commander.NewCommander(bot, personHandler, cfg)
 	go commander.Run()
 
 	log.Println("Bot started!")
