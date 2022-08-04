@@ -1,13 +1,18 @@
 package entity
 
-import "errors"
-
 type Person struct {
-	ID        uint64
-	LastName  string
-	FirstName string
+	ID        uint64 `db:"id"`
+	LastName  string `db:"last_name"`
+	FirstName string `db:"first_name"`
 }
 
-var ErrTimeout = errors.New("Превышел таймаут ожидания")
-var ErrPersonNotFound = errors.New("Персона не найдена")
-var ErrPersonAlreadyExists = errors.New("Персона уже существует")
+type PersonPage struct {
+	Persons []Person
+	Total   uint64
+}
+
+type PersonFilter struct {
+	Offset uint64
+	Limit  uint64
+	Order  string
+}

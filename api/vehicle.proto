@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package ozon.dev.homework.api;
+option go_package = "gitlab.ozon.dev/igor.benko.1991/homework/pkg/api;api";
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+service VehicleService {
+    rpc CreateVehicle(CreateVehicleRequest) returns (CreateVehicleResponse) {
+        option (google.api.http) = {
+            post: "/v1/vehicles"
+            body: "*"
+        };
+    }
+    rpc UpdateVehicle(UpdateVehicleRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            put: "/v1/vehicles"
+            body: "*"
+        };
+    }
+    rpc DeleteVehicle(DeleteVehicleRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            delete: "/v1/vehicles/{id}"
+        };
+    }
+    rpc GetVehicle(GetVehicleRequest) returns (GetVehicleResponse) {
+        option (google.api.http) = {
+            get: "/v1/vehicles/{id}"
+        };
+    }
+    rpc ListVehicle(ListVehicleRequest) returns (ListVehicleResponse) {
+        option (google.api.http) = {
+            get: "/v1/vehicles"
+        };
+    }
+}
+
+// Entity
+message Vehicle {
+    uint64 id = 1;
+    string brand = 2;
+    string model = 3;
+    string reg_number = 4;
+    uint64 person_id = 5;
+}
+
+// Create vehicle
+message CreateVehicleRequest {
+    string brand = 1;
+    string model = 2;
+    string reg_number = 3;
+    uint64 person_id = 4;
+}
+
+message CreateVehicleResponse {
+    uint64 id = 1;
+}
+
+// Update vehicle
+message UpdateVehicleRequest {
+    uint64 id = 1;
+    string brand = 2;
+    string model = 3;
+    string reg_number = 4;
+    uint64 person_id = 5;
+}
+
+// Delete vehicle
+message DeleteVehicleRequest {
+    uint64 id = 1;
+}
+
+// Get vehicle
+message GetVehicleRequest {
+    uint64 id = 1;
+}
+
+message GetVehicleResponse {
+    Vehicle vehicle = 1;
+}
+
+// List vehicles
+message ListVehicleRequest {
+    uint64 offset = 1;
+    uint64 limit = 2;
+    string order = 3;
+}
+
+message ListVehicleResponse {
+    repeated Vehicle vehicles = 1;
+    uint64 total = 2;
+}

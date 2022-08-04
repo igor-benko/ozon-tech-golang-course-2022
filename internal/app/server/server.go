@@ -14,9 +14,12 @@ import (
 
 	"gitlab.ozon.dev/igor.benko.1991/homework/docs"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
+	repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository"
+	memory_repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository/memory"
+	postgres_repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository/postgres"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/service"
-	"gitlab.ozon.dev/igor.benko.1991/homework/internal/storage"
 	pb "gitlab.ozon.dev/igor.benko.1991/homework/pkg/api"
+	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/postgres"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -33,10 +36,36 @@ const (
 
 func Run(cfg config.Config) {
 	// Инициализация хранилища
-	memoryStorage := storage.NewMemoryStorage(cfg.Storage)
+	var personRepo repo.PersonRepo
+	var vehicleRepo repo.VehicleRepo
+
+	if cfg.App.Storage == config.StoragePostgres {
+		err := postgres.Migrate(context.Background(), &cfg.Database)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		pool, err := postgres.New(context.Background(), &cfg.Pooler)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		defer pool.Close()
+
+		personRepo = postgres_repo.NewPersonRepo(pool)
+		vehicleRepo = postgres_repo.NewVehicleRepo(pool)
+
+	} else if cfg.App.Storage == config.StorageMemory {
+		personRepo = memory_repo.NewPersonRepo(cfg.Storage)
+		vehicleRepo = memory_repo.NewVehicleRepo(cfg.Storage)
+
+	} else {
+		log.Fatalf("Unsupported storage type %s", cfg.App.Storage)
+	}
 
 	// Инициализация сервиса
-	personService := service.NewPersonService(memoryStorage, cfg)
+	personService := service.NewPersonService(personRepo, vehicleRepo, cfg)
+	vehicleService := service.NewVehicleService(vehicleRepo, cfg)
 
 	// GRPC
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Grpc.Port))
@@ -46,6 +75,7 @@ func Run(cfg config.Config) {
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterPersonServiceServer(grpcServer, &personService)
+	pb.RegisterVehicleServiceServer(grpcServer, &vehicleService)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -97,6 +127,10 @@ func createGatewayServer(grpcPort, httpPort int) *http.Server {
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	if err := pb.RegisterPersonServiceHandlerFromEndpoint(ctx, mux, fmt.Sprintf(":%d", grpcPort), opts); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := pb.RegisterVehicleServiceHandlerFromEndpoint(ctx, mux, fmt.Sprintf(":%d", grpcPort), opts); err != nil {
 		log.Fatal(err)
 	}
 

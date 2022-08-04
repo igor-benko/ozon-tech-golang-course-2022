@@ -6,14 +6,14 @@ import (
 	"strconv"
 
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/entity"
-	"gitlab.ozon.dev/igor.benko.1991/homework/internal/storage"
+	repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository"
 )
 
 type personHandler struct {
-	storage storage.Storage
+	storage repo.PersonRepo
 }
 
-func NewPersonHandler(storage storage.Storage) *personHandler {
+func NewPersonHandler(storage repo.PersonRepo) *personHandler {
 	return &personHandler{
 		storage: storage,
 	}
@@ -82,15 +82,15 @@ func (c *personHandler) Delete(ctx context.Context, args ...string) string {
 
 func (c *personHandler) List(ctx context.Context, args ...string) string {
 	outputMessage := ""
-	items, err := c.storage.List(ctx)
+	page, err := c.storage.List(ctx, entity.PersonFilter{})
 	if err != nil {
 		return err.Error()
 	}
 
-	if len(items) == 0 {
+	if len(page.Persons) == 0 {
 		outputMessage = "Персон нет"
 	} else {
-		for _, item := range items {
+		for _, item := range page.Persons {
 			outputMessage += fmt.Sprintf("%d - %s %s", item.ID, item.LastName, item.FirstName) + "\n"
 		}
 	}

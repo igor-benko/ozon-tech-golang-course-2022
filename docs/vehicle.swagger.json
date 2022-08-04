@@ -1,12 +1,12 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "person.proto",
+    "title": "vehicle.proto",
     "version": "version not set"
   },
   "tags": [
     {
-      "name": "PersonService"
+      "name": "VehicleService"
     }
   ],
   "consumes": [
@@ -16,14 +16,14 @@
     "application/json"
   ],
   "paths": {
-    "/v1/persons": {
+    "/v1/vehicles": {
       "get": {
-        "operationId": "PersonService_ListPerson",
+        "operationId": "VehicleService_ListVehicle",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/apiListPersonResponse"
+              "$ref": "#/definitions/apiListVehicleResponse"
             }
           },
           "default": {
@@ -56,16 +56,16 @@
           }
         ],
         "tags": [
-          "PersonService"
+          "VehicleService"
         ]
       },
       "post": {
-        "operationId": "PersonService_CreatePerson",
+        "operationId": "VehicleService_CreateVehicle",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/apiCreatePersonResponse"
+              "$ref": "#/definitions/apiCreateVehicleResponse"
             }
           },
           "default": {
@@ -81,16 +81,16 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/apiCreatePersonRequest"
+              "$ref": "#/definitions/apiCreateVehicleRequest"
             }
           }
         ],
         "tags": [
-          "PersonService"
+          "VehicleService"
         ]
       },
       "put": {
-        "operationId": "PersonService_UpdatePerson",
+        "operationId": "VehicleService_UpdateVehicle",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -112,23 +112,23 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/apiUpdatePersonRequest"
+              "$ref": "#/definitions/apiUpdateVehicleRequest"
             }
           }
         ],
         "tags": [
-          "PersonService"
+          "VehicleService"
         ]
       }
     },
-    "/v1/persons/{id}": {
+    "/v1/vehicles/{id}": {
       "get": {
-        "operationId": "PersonService_GetPerson",
+        "operationId": "VehicleService_GetVehicle",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/apiGetPersonResponse"
+              "$ref": "#/definitions/apiGetVehicleResponse"
             }
           },
           "default": {
@@ -148,11 +148,11 @@
           }
         ],
         "tags": [
-          "PersonService"
+          "VehicleService"
         ]
       },
       "delete": {
-        "operationId": "PersonService_DeletePerson",
+        "operationId": "VehicleService_DeleteVehicle",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -178,25 +178,32 @@
           }
         ],
         "tags": [
-          "PersonService"
+          "VehicleService"
         ]
       }
     }
   },
   "definitions": {
-    "apiCreatePersonRequest": {
+    "apiCreateVehicleRequest": {
       "type": "object",
       "properties": {
-        "lastName": {
+        "brand": {
           "type": "string"
         },
-        "firstName": {
+        "model": {
           "type": "string"
+        },
+        "regNumber": {
+          "type": "string"
+        },
+        "personId": {
+          "type": "string",
+          "format": "uint64"
         }
       },
-      "title": "Create person"
+      "title": "Create vehicle"
     },
-    "apiCreatePersonResponse": {
+    "apiCreateVehicleResponse": {
       "type": "object",
       "properties": {
         "id": {
@@ -205,21 +212,21 @@
         }
       }
     },
-    "apiGetPersonResponse": {
+    "apiGetVehicleResponse": {
       "type": "object",
       "properties": {
-        "person": {
-          "$ref": "#/definitions/apiPerson"
+        "vehicle": {
+          "$ref": "#/definitions/apiVehicle"
         }
       }
     },
-    "apiListPersonResponse": {
+    "apiListVehicleResponse": {
       "type": "object",
       "properties": {
-        "persons": {
+        "vehicles": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/apiPerson"
+            "$ref": "#/definitions/apiVehicle"
           }
         },
         "total": {
@@ -228,43 +235,28 @@
         }
       }
     },
-    "apiPerson": {
+    "apiUpdateVehicleRequest": {
       "type": "object",
       "properties": {
         "id": {
           "type": "string",
           "format": "uint64"
         },
-        "lastName": {
+        "brand": {
           "type": "string"
         },
-        "firstName": {
+        "model": {
           "type": "string"
         },
-        "vehicles": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/apiVehicle"
-          }
-        }
-      },
-      "title": "Entity"
-    },
-    "apiUpdatePersonRequest": {
-      "type": "object",
-      "properties": {
-        "id": {
+        "regNumber": {
+          "type": "string"
+        },
+        "personId": {
           "type": "string",
           "format": "uint64"
-        },
-        "lastName": {
-          "type": "string"
-        },
-        "firstName": {
-          "type": "string"
         }
       },
-      "title": "Update person"
+      "title": "Update vehicle"
     },
     "apiVehicle": {
       "type": "object",
