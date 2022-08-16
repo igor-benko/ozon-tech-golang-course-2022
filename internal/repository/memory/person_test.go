@@ -19,7 +19,7 @@ func TestStorage(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	s := NewMemoryStorage(storageConfig)
+	s := NewPersonRepo(storageConfig)
 
 	// Тест создания
 	id, err := s.Create(ctx, entity.Person{
@@ -47,24 +47,24 @@ func TestStorage(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	items, err := s.List(ctx)
+	page, err := s.List(ctx, entity.PersonFilter{})
 	assert.NoError(t, err)
-	assert.Equal(t, 1, len(items))
+	assert.Equal(t, 1, len(page.Persons))
 
 	// Тест удаления
 	err = s.Delete(ctx, 1)
 	assert.NoError(t, err)
 
-	items, err = s.List(ctx)
+	page, err = s.List(ctx, entity.PersonFilter{})
 	assert.NoError(t, err)
-	assert.Equal(t, 0, len(items))
+	assert.Equal(t, 0, len(page.Persons))
 }
 
 func TestStorageConcurent(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	s := NewMemoryStorage(storageConfig)
+	s := NewPersonRepo(storageConfig)
 	wg := &sync.WaitGroup{}
 
 	for i := 1; i < 1000; i++ {
@@ -105,9 +105,9 @@ func TestStorageConcurent(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 
-			items, err := s.List(ctx)
+			page, err := s.List(ctx, entity.PersonFilter{})
 			assert.NoError(t, err)
-			assert.Equal(t, 999, len(items))
+			assert.Equal(t, 999, len(page.Persons))
 		}(i)
 	}
 

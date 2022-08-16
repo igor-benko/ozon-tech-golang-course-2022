@@ -9,7 +9,7 @@ import (
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/entity"
 )
 
-type memoryStorage struct {
+type personStorage struct {
 	sync.RWMutex
 
 	kv        map[uint64]entity.Person
@@ -17,14 +17,14 @@ type memoryStorage struct {
 	pool      chan struct{}
 }
 
-func NewMemoryStorage(cfg config.StorageConfig) *memoryStorage {
-	return &memoryStorage{
+func NewPersonRepo(cfg config.StorageConfig) *personStorage {
+	return &personStorage{
 		kv:   make(map[uint64]entity.Person),
 		pool: make(chan struct{}, cfg.PoolSize),
 	}
 }
 
-func (ms *memoryStorage) Create(ctx context.Context, item entity.Person) (uint64, error) {
+func (ms *personStorage) Create(ctx context.Context, item entity.Person) (uint64, error) {
 	result, err := ms.wrap(ctx, func() (interface{}, error) {
 		if _, ok := ms.kv[item.ID]; ok {
 			return 0, entity.ErrPersonAlreadyExists
@@ -42,7 +42,7 @@ func (ms *memoryStorage) Create(ctx context.Context, item entity.Person) (uint64
 	return result.(uint64), nil
 }
 
-func (ms *memoryStorage) Update(ctx context.Context, item entity.Person) error {
+func (ms *personStorage) Update(ctx context.Context, item entity.Person) error {
 	_, err := ms.wrap(ctx, func() (interface{}, error) {
 		if _, ok := ms.kv[item.ID]; !ok {
 			return nil, entity.ErrPersonNotFound
@@ -59,7 +59,7 @@ func (ms *memoryStorage) Update(ctx context.Context, item entity.Person) error {
 	return nil
 }
 
-func (ms *memoryStorage) Delete(ctx context.Context, personID uint64) error {
+func (ms *personStorage) Delete(ctx context.Context, personID uint64) error {
 	_, err := ms.wrap(ctx, func() (interface{}, error) {
 		if _, ok := ms.kv[personID]; !ok {
 			return nil, entity.ErrPersonNotFound
@@ -76,7 +76,7 @@ func (ms *memoryStorage) Delete(ctx context.Context, personID uint64) error {
 	return nil
 }
 
-func (ms *memoryStorage) Get(ctx context.Context, personID uint64) (*entity.Person, error) {
+func (ms *personStorage) Get(ctx context.Context, personID uint64) (*entity.Person, error) {
 	result, err := ms.wrap(ctx, func() (interface{}, error) {
 		person, ok := ms.kv[personID]
 		if !ok {
@@ -99,32 +99,35 @@ func (ms *memoryStorage) Get(ctx context.Context, personID uint64) (*entity.Pers
 
 }
 
-func (ms *memoryStorage) List(ctx context.Context) ([]entity.Person, error) {
+func (ms *personStorage) List(ctx context.Context, filter entity.PersonFilter) (*entity.PersonPage, error) {
 	result, err := ms.wrap(ctx, func() (interface{}, error) {
 		items := make([]entity.Person, 0, len(ms.kv))
 		for _, v := range ms.kv {
 			items = append(items, v)
 		}
 
-		return items, nil
+		return &entity.PersonPage{
+			Persons: items,
+			Total:   uint64(len(ms.kv)),
+		}, nil
 	})
 
 	if err != nil {
 		return nil, err
 	}
 
-	return result.([]entity.Person), nil
+	return result.(*entity.PersonPage), nil
 
 }
 
-func (ms *memoryStorage) nextID() uint64 {
+func (ms *personStorage) nextID() uint64 {
 	atomic.AddUint64(&ms.currentID, 1)
 	return ms.currentID
 }
 
 type WrapFunc func() (interface{}, error)
 
-func (ms *memoryStorage) wrap(ctx context.Context, f WrapFunc) (interface{}, error) {
+func (ms *personStorage) wrap(ctx context.Context, f WrapFunc) (interface{}, error) {
 	resultCh := make(chan interface{}, 1)
 	errorCh := make(chan error, 1)
 

@@ -1,16 +1,44 @@
 version: '3'
 
 services:
-  person_service:
-    environment:
-      GRPC_PORT: 8080
-      GRPC_GATEWAY_PORT: 8081
-      STORAGE_POOL_SIZE: 10
-      STORAGE_TIMEOUT_MS: 1000
-      TELEGRAM_API_KEY:
-      TELEGRAM_TIMEOUT: 60
-      TELEGRAM_OFFSET: 0
-    container_name: person_service
-    build: .
+  # person_service:
+  #   environment:
+  #     GRPC_PORT: 8080
+  #     GRPC_GATEWAY_PORT: 8081
+  #     STORAGE_POOL_SIZE: 10
+  #     STORAGE_TIMEOUT_MS: 1000
+  #     TELEGRAM_API_KEY:
+  #     TELEGRAM_TIMEOUT: 60
+  #     TELEGRAM_OFFSET: 0
+  #   container_name: person_service
+  #   build: .
+  #   ports:
+  #     - "127.0.0.1:8081:8081"
+
+  pgbouncer_homework:
+    container_name: pgbouncer_homework
+    image: bitnami/pgbouncer
     ports:
-      - "127.0.0.1:8081:8081"
+      - "6432:6432"
+    environment:
+      - POSTGRESQL_HOST=postgres_homework
+      - POSTGRESQL_USERNAME=postgres
+      - POSTGRESQL_PASSWORD=hGrfdsf@URnj
+      - POSTGRESQL_DATABASE=homework
+      - PGBOUNCER_DATABASE=homework
+      - PGBOUNCER_POOL_MODE=transaction
+      - PGBOUNCER_MAX_CLIENT_CONN=100
+      - PGBOUNCER_DEFAULT_POOL_SIZE=20
+    depends_on:
+      - postgres_homework
+
+  postgres_homework:
+    environment:
+      POSTGRES_DB: homework
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: hGrfdsf@URnj
+    restart: always
+    container_name: postgres_homework
+    image: postgres:13
+    ports:
+      - "127.0.0.1:5555:5432"

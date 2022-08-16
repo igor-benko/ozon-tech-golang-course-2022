@@ -5,6 +5,7 @@ option go_package = "gitlab.ozon.dev/igor.benko.1991/homework/pkg/api;api";
 
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
+import "vehicle.proto";
 
 service PersonService {
     rpc CreatePerson(CreatePersonRequest) returns (CreatePersonResponse) {
@@ -29,7 +30,7 @@ service PersonService {
             get: "/v1/persons/{id}"
         };
     }
-    rpc ListPerson(google.protobuf.Empty) returns (ListPersonResponse) {
+    rpc ListPerson(ListPersonRequest) returns (ListPersonResponse) {
         option (google.api.http) = {
             get: "/v1/persons"
         };
@@ -41,6 +42,8 @@ message Person {
     uint64 id = 1;
     string last_name = 2;
     string first_name = 3;
+
+    repeated Vehicle vehicles = 4;
 }
 
 // Create person
@@ -75,6 +78,13 @@ message GetPersonResponse {
 }
 
 // List persons
+message ListPersonRequest {
+    uint64 offset = 1;
+    uint64 limit = 2;
+    string order = 3;
+}
+
 message ListPersonResponse {
     repeated Person persons = 1;
+    uint64 total = 2;
 }

@@ -45,3 +45,7 @@ run-server:
 	go build -o server ./cmd/server && \
 	./server
 .PHONY: run-server
+
+add-migration:
+	goose -dir ./migrations create $(name) sql
+.PHONY: add-migration

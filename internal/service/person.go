@@ -2,28 +2,27 @@ package service
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/entity"
-	"gitlab.ozon.dev/igor.benko.1991/homework/internal/storage"
+	repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository"
 	pb "gitlab.ozon.dev/igor.benko.1991/homework/pkg/api"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 type personService struct {
 	pb.UnimplementedPersonServiceServer
 
-	storage storage.Storage
+	person  repo.PersonRepo
+	vehicle repo.VehicleRepo
 	cfg     config.Config
 }
 
-func NewPersonService(storage storage.Storage, cfg config.Config) personService {
+func NewPersonService(person repo.PersonRepo, vehicle repo.VehicleRepo, cfg config.Config) personService {
 	return personService{
-		storage: storage,
+		person:  person,
+		vehicle: vehicle,
 		cfg:     cfg,
 	}
 }
@@ -32,7 +31,7 @@ func (s *personService) CreatePerson(ctx context.Context, req *pb.CreatePersonRe
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Storage.TimeoutMs)*time.Millisecond)
 	defer cancel()
 
-	id, err := s.storage.Create(ctx, entity.Person{
+	id, err := s.person.Create(ctx, entity.Person{
 		LastName:  req.GetLastName(),
 		FirstName: req.GetFirstName(),
 	})
@@ -48,7 +47,7 @@ func (s *personService) UpdatePerson(ctx context.Context, req *pb.UpdatePersonRe
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Storage.TimeoutMs)*time.Millisecond)
 	defer cancel()
 
-	err := s.storage.Update(ctx, entity.Person{
+	err := s.person.Update(ctx, entity.Person{
 		ID:        req.GetId(),
 		LastName:  req.GetLastName(),
 		FirstName: req.GetFirstName(),
@@ -63,7 +62,7 @@ func (s *personService) DeletePerson(ctx context.Context, req *pb.DeletePersonRe
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Storage.TimeoutMs)*time.Millisecond)
 	defer cancel()
 
-	err := s.storage.Delete(ctx, req.GetId())
+	err := s.person.Delete(ctx, req.GetId())
 	if err != nil {
 		return nil, handleError(err)
 	}
@@ -74,7 +73,13 @@ func (s *personService) GetPerson(ctx context.Context, req *pb.GetPersonRequest)
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Storage.TimeoutMs)*time.Millisecond)
 	defer cancel()
 
-	person, err := s.storage.Get(ctx, req.GetId())
+	personID := req.GetId()
+	person, err := s.person.Get(ctx, personID)
+	if err != nil {
+		return nil, handleError(err)
+	}
+
+	vehicles, err := s.vehicle.GetByPersonID(ctx, personID)
 	if err != nil {
 		return nil, handleError(err)
 	}
@@ -84,44 +89,40 @@ func (s *personService) GetPerson(ctx context.Context, req *pb.GetPersonRequest)
 			Id:        person.ID,
 			LastName:  person.LastName,
 			FirstName: person.FirstName,
+			Vehicles:  mapVehicleToPbVehicle(vehicles),
 		},
 	}, nil
 }
-func (s *personService) ListPerson(ctx context.Context, req *emptypb.Empty) (*pb.ListPersonResponse, error) {
+func (s *personService) ListPerson(ctx context.Context, req *pb.ListPersonRequest) (*pb.ListPersonResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Storage.TimeoutMs)*time.Millisecond)
 	defer cancel()
 
-	persons, err := s.storage.List(ctx)
+	page, err := s.person.List(ctx, entity.PersonFilter{
+		Offset: req.GetOffset(),
+		Limit:  req.GetLimit(),
+		Order:  req.GetOrder(),
+	})
 	if err != nil {
 		return nil, handleError(err)
 	}
 
-	pbPersons := make([]*pb.Person, len(persons))
-	for i, person := range persons {
+	pbPersons := make([]*pb.Person, len(page.Persons))
+	for i, person := range page.Persons {
+		vehicles, err := s.vehicle.GetByPersonID(ctx, person.ID)
+		if err != nil {
+			return nil, handleError(err)
+		}
+
 		pbPersons[i] = &pb.Person{
 			Id:        person.ID,
 			LastName:  person.LastName,
 			FirstName: person.FirstName,
+			Vehicles:  mapVehicleToPbVehicle(vehicles),
 		}
 	}
 
 	return &pb.ListPersonResponse{
 		Persons: pbPersons,
+		Total:   page.Total,
 	}, nil
-}
-
-func handleError(err error) error {
-	if errors.Is(err, entity.ErrPersonAlreadyExists) {
-		return status.Error(codes.AlreadyExists, err.Error())
-	}
-
-	if errors.Is(err, entity.ErrPersonNotFound) {
-		return status.Error(codes.NotFound, err.Error())
-	}
-
-	if errors.Is(err, entity.ErrTimeout) {
-		return status.Error(codes.DeadlineExceeded, err.Error())
-	}
-
-	return err
 }
