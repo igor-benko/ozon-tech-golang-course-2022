@@ -27,7 +27,7 @@ type PersonServiceClient interface {
 	UpdatePerson(ctx context.Context, in *UpdatePersonRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeletePerson(ctx context.Context, in *DeletePersonRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetPerson(ctx context.Context, in *GetPersonRequest, opts ...grpc.CallOption) (*GetPersonResponse, error)
-	ListPerson(ctx context.Context, in *ListPersonRequest, opts ...grpc.CallOption) (*ListPersonResponse, error)
+	ListPerson(ctx context.Context, in *ListPersonRequest, opts ...grpc.CallOption) (PersonService_ListPersonClient, error)
 }
 
 type personServiceClient struct {
@@ -74,13 +74,36 @@ func (c *personServiceClient) GetPerson(ctx context.Context, in *GetPersonReques
 	return out, nil
 }
 
-func (c *personServiceClient) ListPerson(ctx context.Context, in *ListPersonRequest, opts ...grpc.CallOption) (*ListPersonResponse, error) {
-	out := new(ListPersonResponse)
-	err := c.cc.Invoke(ctx, "/ozon.dev.homework.api.PersonService/ListPerson", in, out, opts...)
+func (c *personServiceClient) ListPerson(ctx context.Context, in *ListPersonRequest, opts ...grpc.CallOption) (PersonService_ListPersonClient, error) {
+	stream, err := c.cc.NewStream(ctx, &PersonService_ServiceDesc.Streams[0], "/ozon.dev.homework.api.PersonService/ListPerson", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &personServiceListPersonClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type PersonService_ListPersonClient interface {
+	Recv() (*Person, error)
+	grpc.ClientStream
+}
+
+type personServiceListPersonClient struct {
+	grpc.ClientStream
+}
+
+func (x *personServiceListPersonClient) Recv() (*Person, error) {
+	m := new(Person)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // PersonServiceServer is the server API for PersonService service.
@@ -91,7 +114,7 @@ type PersonServiceServer interface {
 	UpdatePerson(context.Context, *UpdatePersonRequest) (*emptypb.Empty, error)
 	DeletePerson(context.Context, *DeletePersonRequest) (*emptypb.Empty, error)
 	GetPerson(context.Context, *GetPersonRequest) (*GetPersonResponse, error)
-	ListPerson(context.Context, *ListPersonRequest) (*ListPersonResponse, error)
+	ListPerson(*ListPersonRequest, PersonService_ListPersonServer) error
 	mustEmbedUnimplementedPersonServiceServer()
 }
 
@@ -111,8 +134,8 @@ func (UnimplementedPersonServiceServer) DeletePerson(context.Context, *DeletePer
 func (UnimplementedPersonServiceServer) GetPerson(context.Context, *GetPersonRequest) (*GetPersonResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPerson not implemented")
 }
-func (UnimplementedPersonServiceServer) ListPerson(context.Context, *ListPersonRequest) (*ListPersonResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListPerson not implemented")
+func (UnimplementedPersonServiceServer) ListPerson(*ListPersonRequest, PersonService_ListPersonServer) error {
+	return status.Errorf(codes.Unimplemented, "method ListPerson not implemented")
 }
 func (UnimplementedPersonServiceServer) mustEmbedUnimplementedPersonServiceServer() {}
 
@@ -199,22 +222,25 @@ func _PersonService_GetPerson_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _PersonService_ListPerson_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListPersonRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func _PersonService_ListPerson_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ListPersonRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(PersonServiceServer).ListPerson(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ozon.dev.homework.api.PersonService/ListPerson",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PersonServiceServer).ListPerson(ctx, req.(*ListPersonRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(PersonServiceServer).ListPerson(m, &personServiceListPersonServer{stream})
+}
+
+type PersonService_ListPersonServer interface {
+	Send(*Person) error
+	grpc.ServerStream
+}
+
+type personServiceListPersonServer struct {
+	grpc.ServerStream
+}
+
+func (x *personServiceListPersonServer) Send(m *Person) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 // PersonService_ServiceDesc is the grpc.ServiceDesc for PersonService service.
@@ -240,11 +266,13 @@ var PersonService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "GetPerson",
 			Handler:    _PersonService_GetPerson_Handler,
 		},
+	},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "ListPerson",
-			Handler:    _PersonService_ListPerson_Handler,
+			StreamName:    "ListPerson",
+			Handler:       _PersonService_ListPerson_Handler,
+			ServerStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "person.proto",
 }

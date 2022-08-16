@@ -13,21 +13,17 @@ const (
 )
 
 type Config struct {
-	App      AppConfig      `yaml:"app"`
-	Grpc     GrpcConfig     `yaml:"grpc"`
-	Storage  StorageConfig  `yaml:"storage"`
-	Telegram TelegramConfig `yaml:"telegram"`
-	Pooler   PoolerConfig   `yaml:"pooler"`
-	Database DatabaseConfig `yaml:"database"`
+	PersonService PersonServiceConfig `yaml:"person_service"`
+	Storage       StorageConfig       `yaml:"storage"`
+	Telegram      TelegramConfig      `yaml:"telegram"`
+	Pooler        PoolerConfig        `yaml:"pooler"`
+	Database      DatabaseConfig      `yaml:"database"`
 }
 
-type AppConfig struct {
-	Storage string `yaml:"storage" env:"APP_STORAGE"`
-}
-
-type GrpcConfig struct {
-	Port        int `yaml:"port" env:"GRPC_PORT"`
-	GatewayPort int `yaml:"gateway_port" env:"GRPC_GATEWAY_PORT"`
+type PersonServiceConfig struct {
+	Port        int    `yaml:"port" env:"PERSON_SERVICE_PORT"`
+	GatewayPort int    `yaml:"gateway_port" env:"PERSON_SERVICE_GATEWAY_PORT"`
+	Storage     string `yaml:"storage" env:"PERSON_SERVICE_STORAGE"`
 }
 
 type StorageConfig struct {
@@ -36,9 +32,12 @@ type StorageConfig struct {
 }
 
 type TelegramConfig struct {
-	ApiKey  string `yaml:"api_key" env:"TELEGRAM_API_KEY"`
-	Timeout int    `yaml:"timeout" env:"TELEGRAM_TIMEOUT"`
-	Offset  int    `yaml:"offset" env:"TELEGRAM_OFFSET"`
+	ApiKey          string `yaml:"api_key" env:"TELEGRAM_API_KEY"`
+	Timeout         int    `yaml:"timeout" env:"TELEGRAM_TIMEOUT"`
+	Offset          int    `yaml:"offset" env:"TELEGRAM_OFFSET"`
+	PersonService   string `yaml:"person_service" env:"TELEGRAM_PERSON_SERVICE"`
+	RetryMax        uint   `yaml:"retry_max" env:"TELEGRAM_RETRY_MAX"`
+	RetryIntervalMs uint   `yaml:"retry_interval_ms" env:"TELEGRAM_RETRY_INTERVAL_MS"`
 }
 
 type PoolerConfig struct {

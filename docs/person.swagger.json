@@ -21,9 +21,18 @@
         "operationId": "PersonService_ListPerson",
         "responses": {
           "200": {
-            "description": "A successful response.",
+            "description": "A successful response.(streaming responses)",
             "schema": {
-              "$ref": "#/definitions/apiListPersonResponse"
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/apiPerson"
+                },
+                "error": {
+                  "$ref": "#/definitions/rpcStatus"
+                }
+              },
+              "title": "Stream result of apiPerson"
             }
           },
           "default": {
@@ -210,21 +219,6 @@
       "properties": {
         "person": {
           "$ref": "#/definitions/apiPerson"
-        }
-      }
-    },
-    "apiListPersonResponse": {
-      "type": "object",
-      "properties": {
-        "persons": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/apiPerson"
-          }
-        },
-        "total": {
-          "type": "string",
-          "format": "uint64"
         }
       }
     },

@@ -26,6 +26,9 @@ func New(ctx context.Context, cfg *config.PoolerConfig) (*pgxpool.Pool, error) {
 		log.Fatal("ping database error", err)
 	}
 
+	config := pool.Config()
+	config.ConnConfig.PreferSimpleProtocol = true
+
 	return pool, nil
 }
 

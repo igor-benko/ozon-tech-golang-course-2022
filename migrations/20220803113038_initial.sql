@@ -21,6 +21,6 @@ CREATE TABLE IF NOT EXISTS vehicles
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE persons;
 DROP TABLE vehicles;
+DROP TABLE persons;
 -- +goose StatementEnd
