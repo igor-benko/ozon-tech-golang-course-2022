@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/adapters"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/commander"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
 	"google.golang.org/grpc"
@@ -38,9 +39,10 @@ func Run(cfg config.Config) {
 	}
 
 	personService := pb.NewPersonServiceClient(conn)
+	personAdapter := adapters.NewPerson(personService)
 
 	// Инициализация обработчиков команд
-	personHandler := commander.NewPersonHandler(personService)
+	personHandler := commander.NewPersonHandler(personAdapter)
 
 	// Запуск бота
 	commander := commander.NewCommander(bot, personHandler, cfg)
