@@ -4,32 +4,27 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
-	"gitlab.ozon.dev/igor.benko.1991/homework/internal/entity"
-	repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository"
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/client"
 )
 
 type personHandler struct {
-	storage repo.PersonRepo
+	client client.PersonClient
 }
 
-func NewPersonHandler(storage repo.PersonRepo) *personHandler {
+func NewPersonHandler(client client.PersonClient) *personHandler {
 	return &personHandler{
-		storage: storage,
+		client: client,
 	}
 }
 
 func (c *personHandler) Create(ctx context.Context, args ...string) string {
 	if len(args) != 3 {
-		// msg := tgbotapi.NewMessage(inputMessage.Chat.ID, "Неправильный формат. Должно быть /person create фамилия имя")
-		// c.api.Send(msg)
 		return "Неправильный формат. Должно быть /person create фамилия имя"
 	}
 
-	id, err := c.storage.Create(ctx, entity.Person{
-		LastName:  args[1],
-		FirstName: args[2],
-	})
+	id, err := c.client.CreatePerson(ctx, args[1], args[2])
 
 	if err != nil {
 		return fmt.Sprintf("Ошибка создания персоны: %s", err)
@@ -48,13 +43,7 @@ func (c *personHandler) Update(ctx context.Context, args ...string) string {
 		return "Неправильный формат идентификатора"
 	}
 
-	err = c.storage.Update(ctx, entity.Person{
-		ID:        uint64(id),
-		LastName:  args[2],
-		FirstName: args[3],
-	})
-
-	if err != nil {
+	if err = c.client.UpdatePerson(ctx, uint64(id), args[2], args[3]); err != nil {
 		return fmt.Sprintf("Ошибка создания персоны: %s", err)
 	}
 
@@ -71,9 +60,7 @@ func (c *personHandler) Delete(ctx context.Context, args ...string) string {
 		return "Неправильный формат идентификатора"
 	}
 
-	err = c.storage.Delete(ctx, uint64(id))
-
-	if err != nil {
+	if err = c.client.DeletePerson(ctx, uint64(id)); err != nil {
 		return fmt.Sprintf("Ошибка удаления персоны: %s", err)
 	}
 
@@ -81,19 +68,53 @@ func (c *personHandler) Delete(ctx context.Context, args ...string) string {
 }
 
 func (c *personHandler) List(ctx context.Context, args ...string) string {
-	outputMessage := ""
-	page, err := c.storage.List(ctx, entity.PersonFilter{})
-	if err != nil {
-		return err.Error()
+	var offset uint64
+	if len(args) == 2 {
+		value, err := strconv.Atoi(args[1])
+		if err != nil {
+			return "Неправильный формат offset"
+		}
+		offset = uint64(value)
 	}
 
-	if len(page.Persons) == 0 {
-		outputMessage = "Персон нет"
-	} else {
-		for _, item := range page.Persons {
-			outputMessage += fmt.Sprintf("%d - %s %s", item.ID, item.LastName, item.FirstName) + "\n"
+	var limit uint64
+	if len(args) == 3 {
+		value, err := strconv.Atoi(args[2])
+		if err != nil {
+			return "Неправильный формат limit"
+		}
+		limit = uint64(value)
+	}
+
+	var order string
+	if len(args) == 4 {
+		order = args[3]
+	}
+
+	count := 0
+	outputMessage := strings.Builder{}
+	dataCh, errCh := c.client.ListPerson(ctx, offset, limit, order)
+
+loop:
+	for {
+		select {
+		case item, ok := <-dataCh:
+			if !ok {
+				break loop
+			}
+			outputMessage.WriteString(fmt.Sprintf("%d - %s %s\n", item.ID, item.LastName, item.FirstName))
+			count++
+		case err, ok := <-errCh:
+			if !ok {
+				break loop
+			}
+			return err.Error()
 		}
 	}
 
-	return outputMessage
+	if count == 0 {
+		return "Персон нет"
+	}
+
+	return outputMessage.String()
 }

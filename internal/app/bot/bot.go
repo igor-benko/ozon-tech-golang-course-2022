@@ -5,12 +5,16 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/commander"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
-	repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository/memory"
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/client"
+	"google.golang.org/grpc"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	pb "gitlab.ozon.dev/igor.benko.1991/homework/pkg/api"
 )
 
 func Run(cfg config.Config) {
@@ -20,11 +24,25 @@ func Run(cfg config.Config) {
 	}
 	bot.Debug = true
 
-	// Инициализация хранилища
-	memoryStorage := repo.NewPersonRepo(cfg.Storage)
+	// Инициализация сервисов
+	opts := []grpc_retry.CallOption{
+		grpc_retry.WithBackoff(grpc_retry.BackoffLinear(time.Duration(cfg.Telegram.RetryIntervalMs) * time.Millisecond)),
+		grpc_retry.WithMax(cfg.Telegram.RetryMax),
+	}
+
+	conn, err := grpc.Dial(cfg.Telegram.PersonService,
+		grpc.WithInsecure(),
+		grpc.WithStreamInterceptor(grpc_retry.StreamClientInterceptor(opts...)),
+		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(opts...)))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	personService := pb.NewPersonServiceClient(conn)
+	personAdapter := client.NewPersonClient(personService)
 
 	// Инициализация обработчиков команд
-	personHandler := commander.NewPersonHandler(memoryStorage)
+	personHandler := commander.NewPersonHandler(personAdapter)
 
 	// Запуск бота
 	commander := commander.NewCommander(bot, personHandler, cfg)

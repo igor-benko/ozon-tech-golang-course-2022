@@ -39,7 +39,7 @@ func Run(cfg config.Config) {
 	var personRepo repo.PersonRepo
 	var vehicleRepo repo.VehicleRepo
 
-	if cfg.App.Storage == config.StoragePostgres {
+	if cfg.PersonService.Storage == config.StoragePostgres {
 		err := postgres.Migrate(context.Background(), &cfg.Database)
 		if err != nil {
 			log.Fatal(err)
@@ -55,12 +55,12 @@ func Run(cfg config.Config) {
 		personRepo = postgres_repo.NewPersonRepo(pool)
 		vehicleRepo = postgres_repo.NewVehicleRepo(pool)
 
-	} else if cfg.App.Storage == config.StorageMemory {
+	} else if cfg.PersonService.Storage == config.StorageMemory {
 		personRepo = memory_repo.NewPersonRepo(cfg.Storage)
 		vehicleRepo = memory_repo.NewVehicleRepo(cfg.Storage)
 
 	} else {
-		log.Fatalf("Unsupported storage type %s", cfg.App.Storage)
+		log.Fatalf("Unsupported storage type %s", cfg.PersonService.Storage)
 	}
 
 	// Инициализация сервиса
@@ -68,7 +68,7 @@ func Run(cfg config.Config) {
 	vehicleService := service.NewVehicleService(vehicleRepo, cfg)
 
 	// GRPC
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Grpc.Port))
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.PersonService.Port))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func Run(cfg config.Config) {
 	}()
 
 	// GRPC http gateway
-	gatewayServer := createGatewayServer(cfg.Grpc.Port, cfg.Grpc.GatewayPort)
+	gatewayServer := createGatewayServer(cfg.PersonService.Port, cfg.PersonService.GatewayPort)
 	go func() {
 		log.Println("Grpc gateway started!")
 		if err := gatewayServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

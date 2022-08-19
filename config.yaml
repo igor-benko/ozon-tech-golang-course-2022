@@ -1,18 +1,19 @@
-app:
-  storage: postgres
-
-grpc:
+person_service:
   port: 8080
   gateway_port: 8081
+  storage: postgres
+
+telegram:
+  api_key:
+  timeout: 60
+  offset: 0
+  person_service: 127.0.0.1:8080
+  retry_max: 3
+  retry_interval_ms: 1000
 
 storage:
   pool_size: 10
-  timeout_ms: 1000
-
-telegram:
-  api_key: 
-  timeout: 60
-  offset: 0
+  timeout_ms: 10000
 
 database:
   host: localhost

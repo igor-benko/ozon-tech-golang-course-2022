@@ -30,7 +30,7 @@ service PersonService {
             get: "/v1/persons/{id}"
         };
     }
-    rpc ListPerson(ListPersonRequest) returns (ListPersonResponse) {
+    rpc ListPerson(ListPersonRequest) returns (stream Person) {
         option (google.api.http) = {
             get: "/v1/persons"
         };

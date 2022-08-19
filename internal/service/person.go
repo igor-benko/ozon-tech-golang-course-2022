@@ -43,6 +43,7 @@ func (s *personService) CreatePerson(ctx context.Context, req *pb.CreatePersonRe
 		Id: id,
 	}, nil
 }
+
 func (s *personService) UpdatePerson(ctx context.Context, req *pb.UpdatePersonRequest) (*emptypb.Empty, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Storage.TimeoutMs)*time.Millisecond)
 	defer cancel()
@@ -69,6 +70,7 @@ func (s *personService) DeletePerson(ctx context.Context, req *pb.DeletePersonRe
 
 	return &emptypb.Empty{}, nil
 }
+
 func (s *personService) GetPerson(ctx context.Context, req *pb.GetPersonRequest) (*pb.GetPersonResponse, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Storage.TimeoutMs)*time.Millisecond)
 	defer cancel()
@@ -93,8 +95,9 @@ func (s *personService) GetPerson(ctx context.Context, req *pb.GetPersonRequest)
 		},
 	}, nil
 }
-func (s *personService) ListPerson(ctx context.Context, req *pb.ListPersonRequest) (*pb.ListPersonResponse, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Storage.TimeoutMs)*time.Millisecond)
+
+func (s *personService) ListPerson(req *pb.ListPersonRequest, stream pb.PersonService_ListPersonServer) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.cfg.Storage.TimeoutMs)*time.Millisecond)
 	defer cancel()
 
 	page, err := s.person.List(ctx, entity.PersonFilter{
@@ -103,26 +106,25 @@ func (s *personService) ListPerson(ctx context.Context, req *pb.ListPersonReques
 		Order:  req.GetOrder(),
 	})
 	if err != nil {
-		return nil, handleError(err)
+		return handleError(err)
 	}
 
-	pbPersons := make([]*pb.Person, len(page.Persons))
-	for i, person := range page.Persons {
+	for _, person := range page.Persons {
 		vehicles, err := s.vehicle.GetByPersonID(ctx, person.ID)
 		if err != nil {
-			return nil, handleError(err)
+			return handleError(err)
 		}
 
-		pbPersons[i] = &pb.Person{
+		err = stream.Send(&pb.Person{
 			Id:        person.ID,
 			LastName:  person.LastName,
 			FirstName: person.FirstName,
 			Vehicles:  mapVehicleToPbVehicle(vehicles),
+		})
+		if err != nil {
+			return handleError(err)
 		}
 	}
 
-	return &pb.ListPersonResponse{
-		Persons: pbPersons,
-		Total:   page.Total,
-	}, nil
+	return nil
 }
