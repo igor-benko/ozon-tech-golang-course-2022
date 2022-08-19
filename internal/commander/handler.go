@@ -6,16 +6,16 @@ import (
 	"strconv"
 	"strings"
 
-	"gitlab.ozon.dev/igor.benko.1991/homework/internal/adapters"
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/client"
 )
 
 type personHandler struct {
-	service adapters.Person
+	client client.PersonClient
 }
 
-func NewPersonHandler(service adapters.Person) *personHandler {
+func NewPersonHandler(client client.PersonClient) *personHandler {
 	return &personHandler{
-		service: service,
+		client: client,
 	}
 }
 
@@ -24,7 +24,7 @@ func (c *personHandler) Create(ctx context.Context, args ...string) string {
 		return "Неправильный формат. Должно быть /person create фамилия имя"
 	}
 
-	id, err := c.service.CreatePerson(ctx, args[1], args[2])
+	id, err := c.client.CreatePerson(ctx, args[1], args[2])
 
 	if err != nil {
 		return fmt.Sprintf("Ошибка создания персоны: %s", err)
@@ -43,7 +43,7 @@ func (c *personHandler) Update(ctx context.Context, args ...string) string {
 		return "Неправильный формат идентификатора"
 	}
 
-	if err = c.service.UpdatePerson(ctx, uint64(id), args[2], args[3]); err != nil {
+	if err = c.client.UpdatePerson(ctx, uint64(id), args[2], args[3]); err != nil {
 		return fmt.Sprintf("Ошибка создания персоны: %s", err)
 	}
 
@@ -60,7 +60,7 @@ func (c *personHandler) Delete(ctx context.Context, args ...string) string {
 		return "Неправильный формат идентификатора"
 	}
 
-	if err = c.service.DeletePerson(ctx, uint64(id)); err != nil {
+	if err = c.client.DeletePerson(ctx, uint64(id)); err != nil {
 		return fmt.Sprintf("Ошибка удаления персоны: %s", err)
 	}
 
@@ -93,7 +93,7 @@ func (c *personHandler) List(ctx context.Context, args ...string) string {
 
 	count := 0
 	outputMessage := strings.Builder{}
-	dataCh, errCh := c.service.ListPerson(ctx, offset, limit, order)
+	dataCh, errCh := c.client.ListPerson(ctx, offset, limit, order)
 
 loop:
 	for {

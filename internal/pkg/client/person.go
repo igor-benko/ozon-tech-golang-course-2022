@@ -1,4 +1,4 @@
-package adapters
+package client
 
 import (
 	"context"
@@ -13,24 +13,24 @@ type PersonDto struct {
 	FirstName string
 }
 
-type Person interface {
+type PersonClient interface {
 	CreatePerson(ctx context.Context, lastName, firstName string) (uint64, error)
 	UpdatePerson(ctx context.Context, id uint64, lastName, firstName string) error
 	DeletePerson(ctx context.Context, id uint64) error
 	ListPerson(ctx context.Context, offset, limit uint64, order string) (<-chan *PersonDto, <-chan error)
 }
 
-type person struct {
+type personClient struct {
 	client pb.PersonServiceClient
 }
 
-func NewPerson(client pb.PersonServiceClient) *person {
-	return &person{
+func NewPersonClient(client pb.PersonServiceClient) *personClient {
+	return &personClient{
 		client: client,
 	}
 }
 
-func (s *person) CreatePerson(ctx context.Context, lastName, firstName string) (uint64, error) {
+func (s *personClient) CreatePerson(ctx context.Context, lastName, firstName string) (uint64, error) {
 	resp, err := s.client.CreatePerson(ctx, &pb.CreatePersonRequest{
 		LastName:  lastName,
 		FirstName: firstName,
@@ -39,7 +39,7 @@ func (s *person) CreatePerson(ctx context.Context, lastName, firstName string) (
 	return resp.GetId(), err
 }
 
-func (s *person) UpdatePerson(ctx context.Context, id uint64, lastName, firstName string) error {
+func (s *personClient) UpdatePerson(ctx context.Context, id uint64, lastName, firstName string) error {
 	_, err := s.client.UpdatePerson(ctx, &pb.UpdatePersonRequest{
 		Id:        id,
 		LastName:  lastName,
@@ -49,7 +49,7 @@ func (s *person) UpdatePerson(ctx context.Context, id uint64, lastName, firstNam
 	return err
 }
 
-func (s *person) DeletePerson(ctx context.Context, id uint64) error {
+func (s *personClient) DeletePerson(ctx context.Context, id uint64) error {
 	_, err := s.client.DeletePerson(ctx, &pb.DeletePersonRequest{
 		Id: id,
 	})
@@ -57,7 +57,7 @@ func (s *person) DeletePerson(ctx context.Context, id uint64) error {
 	return err
 }
 
-func (s *person) ListPerson(ctx context.Context, offset, limit uint64, order string) (<-chan *PersonDto, <-chan error) {
+func (s *personClient) ListPerson(ctx context.Context, offset, limit uint64, order string) (<-chan *PersonDto, <-chan error) {
 	ch := make(chan *PersonDto, 1)
 	errCh := make(chan error, 1)
 

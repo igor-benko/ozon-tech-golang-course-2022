@@ -7,9 +7,9 @@ import (
 	"syscall"
 	"time"
 
-	"gitlab.ozon.dev/igor.benko.1991/homework/internal/adapters"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/commander"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/client"
 	"google.golang.org/grpc"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -39,7 +39,7 @@ func Run(cfg config.Config) {
 	}
 
 	personService := pb.NewPersonServiceClient(conn)
-	personAdapter := adapters.NewPerson(personService)
+	personAdapter := client.NewPersonClient(personService)
 
 	// Инициализация обработчиков команд
 	personHandler := commander.NewPersonHandler(personAdapter)
