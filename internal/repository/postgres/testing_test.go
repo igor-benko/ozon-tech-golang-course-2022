@@ -14,7 +14,7 @@ type personRepoFixture struct {
 	repo storage.PersonRepo
 }
 
-func setUp(t *testing.T) personRepoFixture {
+func setUpPersonRepoFixture(t *testing.T) personRepoFixture {
 	ctrl := gomock.NewController(t)
 	pool := pgxpoolmock.NewMockPgxPool(ctrl)
 	repo := NewPersonRepo(pool)
@@ -26,6 +26,6 @@ func setUp(t *testing.T) personRepoFixture {
 	}
 }
 
-func (f *personRepoFixture) tearDown() {
+func (f *personRepoFixture) tearDownPersonRepoFixture() {
 	f.ctrl.Finish()
 }

@@ -13,8 +13,8 @@ import (
 func TestCreatePerson(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		// Arrange
-		f := setUp(t)
-		defer f.tearDown()
+		f := setUpPersonRepoFixture(t)
+		defer f.tearDownPersonRepoFixture()
 
 		arg1, arg2 := "Igor", "Benko"
 		id := uint64(1)
@@ -38,8 +38,8 @@ func TestCreatePerson(t *testing.T) {
 func TestUpdatePerson(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		// Arrange
-		f := setUp(t)
-		defer f.tearDown()
+		f := setUpPersonRepoFixture(t)
+		defer f.tearDownPersonRepoFixture()
 
 		arg1, arg2, arg3 := "Igor", "Benko", uint64(1)
 		query := "UPDATE persons SET first_name = $1, last_name = $2 WHERE id = $3"
@@ -61,8 +61,8 @@ func TestUpdatePerson(t *testing.T) {
 func TestDeletePerson(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		// Arrange
-		f := setUp(t)
-		defer f.tearDown()
+		f := setUpPersonRepoFixture(t)
+		defer f.tearDownPersonRepoFixture()
 
 		id := uint64(1)
 		query := "DELETE FROM persons WHERE id = $1"
@@ -80,8 +80,8 @@ func TestDeletePerson(t *testing.T) {
 func TestGetPerson(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		// Arrange
-		f := setUp(t)
-		defer f.tearDown()
+		f := setUpPersonRepoFixture(t)
+		defer f.tearDownPersonRepoFixture()
 
 		arg1, arg2 := "Igor", "Benko"
 		id := uint64(1)
@@ -104,8 +104,8 @@ func TestGetPerson(t *testing.T) {
 func TestListPerson(t *testing.T) {
 	t.Run("success/limit < count", func(t *testing.T) {
 		// Arrange
-		f := setUp(t)
-		defer f.tearDown()
+		f := setUpPersonRepoFixture(t)
+		defer f.tearDownPersonRepoFixture()
 
 		filter := entity.PersonFilter{
 			Limit:  0,
@@ -142,8 +142,8 @@ func TestListPerson(t *testing.T) {
 	})
 	t.Run("success/limit > count", func(t *testing.T) {
 		// Arrange
-		f := setUp(t)
-		defer f.tearDown()
+		f := setUpPersonRepoFixture(t)
+		defer f.tearDownPersonRepoFixture()
 
 		filter := entity.PersonFilter{
 			Limit:  2,
@@ -180,8 +180,8 @@ func TestListPerson(t *testing.T) {
 	})
 	t.Run("success/offset > count", func(t *testing.T) {
 		// Arrange
-		f := setUp(t)
-		defer f.tearDown()
+		f := setUpPersonRepoFixture(t)
+		defer f.tearDownPersonRepoFixture()
 
 		filter := entity.PersonFilter{
 			Limit:  0,
@@ -215,8 +215,8 @@ func TestListPerson(t *testing.T) {
 	})
 	t.Run("order is empty", func(t *testing.T) {
 		// Arrange
-		f := setUp(t)
-		defer f.tearDown()
+		f := setUpPersonRepoFixture(t)
+		defer f.tearDownPersonRepoFixture()
 
 		filter := entity.PersonFilter{
 			Limit:  0,
