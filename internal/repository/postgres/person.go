@@ -7,15 +7,14 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/georgysavva/scany/pgxscan"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/entity"
 )
 
 type personRepo struct {
-	pool *pgxpool.Pool
+	pool PgxPool
 }
 
-func NewPersonRepo(pool *pgxpool.Pool) *personRepo {
+func NewPersonRepo(pool PgxPool) *personRepo {
 	return &personRepo{
 		pool: pool,
 	}
@@ -28,13 +27,17 @@ func (r *personRepo) Create(ctx context.Context, item entity.Person) (uint64, er
 			"last_name":  item.LastName,
 		}).Suffix("RETURNING id").
 		PlaceholderFormat(sq.Dollar).ToSql()
+	if err != nil {
+		return 0, err
+	}
 
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return 0, err
 	}
 
 	var id uint64
-	if err := r.pool.QueryRow(ctx, query, args...).Scan(&id); err != nil {
+	if err := pgxscan.ScanOne(&id, rows); err != nil {
 		return 0, err
 	}
 
@@ -49,7 +52,6 @@ func (r *personRepo) Update(ctx context.Context, item entity.Person) error {
 		}).
 		Where(sq.Eq{"id": item.ID}).
 		PlaceholderFormat(sq.Dollar).ToSql()
-
 	if err != nil {
 		return err
 	}
@@ -64,7 +66,6 @@ func (r *personRepo) Update(ctx context.Context, item entity.Person) error {
 func (r *personRepo) Delete(ctx context.Context, id uint64) error {
 	query, args, err := sq.Delete("persons").Where(sq.Eq{"id": id}).
 		PlaceholderFormat(sq.Dollar).ToSql()
-
 	if err != nil {
 		return err
 	}
@@ -79,7 +80,6 @@ func (r *personRepo) Delete(ctx context.Context, id uint64) error {
 func (r *personRepo) Get(ctx context.Context, id uint64) (*entity.Person, error) {
 	query, args, err := sq.Select("*").From("persons").Where(sq.Eq{"id": id}).Limit(1).
 		PlaceholderFormat(sq.Dollar).ToSql()
-
 	if err != nil {
 		return nil, err
 	}

@@ -1,3 +1,4 @@
+// go:generate mockgen -source ./../../pkg/api/person_grpc.pb.go -destination ./person_mock.go -package=service
 package service
 
 import (
@@ -59,6 +60,7 @@ func (s *personService) UpdatePerson(ctx context.Context, req *pb.UpdatePersonRe
 
 	return &emptypb.Empty{}, nil
 }
+
 func (s *personService) DeletePerson(ctx context.Context, req *pb.DeletePersonRequest) (*emptypb.Empty, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.Storage.TimeoutMs)*time.Millisecond)
 	defer cancel()

@@ -8,15 +8,14 @@ import (
 	sq "github.com/Masterminds/squirrel"
 	"github.com/georgysavva/scany/pgxscan"
 	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/entity"
 )
 
 type vehicleRepo struct {
-	pool *pgxpool.Pool
+	pool PgxPool
 }
 
-func NewVehicleRepo(pool *pgxpool.Pool) *vehicleRepo {
+func NewVehicleRepo(pool PgxPool) *vehicleRepo {
 	return &vehicleRepo{
 		pool: pool,
 	}
@@ -31,7 +30,6 @@ func (r *vehicleRepo) Create(ctx context.Context, item entity.Vehicle) (uint64, 
 			"person_id":  item.PersonID,
 		}).Suffix("RETURNING id").
 		PlaceholderFormat(sq.Dollar).ToSql()
-
 	if err != nil {
 		return 0, err
 	}
@@ -53,7 +51,6 @@ func (r *vehicleRepo) Update(ctx context.Context, item entity.Vehicle) error {
 		}).
 		Where(sq.Eq{"id": item.ID}).
 		PlaceholderFormat(sq.Dollar).ToSql()
-
 	if err != nil {
 		return err
 	}
@@ -68,7 +65,6 @@ func (r *vehicleRepo) Update(ctx context.Context, item entity.Vehicle) error {
 func (r *vehicleRepo) Delete(ctx context.Context, id uint64) error {
 	query, args, err := sq.Delete("vehicles").Where(sq.Eq{"id": id}).
 		PlaceholderFormat(sq.Dollar).ToSql()
-
 	if err != nil {
 		return err
 	}
@@ -83,7 +79,6 @@ func (r *vehicleRepo) Delete(ctx context.Context, id uint64) error {
 func (r *vehicleRepo) Get(ctx context.Context, id uint64) (*entity.Vehicle, error) {
 	query, args, err := sq.Select("*").From("vehicles").Where(sq.Eq{"id": id}).Limit(1).
 		PlaceholderFormat(sq.Dollar).ToSql()
-
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +98,6 @@ func (r *vehicleRepo) Get(ctx context.Context, id uint64) (*entity.Vehicle, erro
 func (r *vehicleRepo) Exists(ctx context.Context, regNum string) (bool, error) {
 	query, args, err := sq.Select("1").From("vehicles").Where(sq.Eq{"reg_number": regNum}).Limit(1).
 		PlaceholderFormat(sq.Dollar).ToSql()
-
 	if err != nil {
 		return false, err
 	}
@@ -122,7 +116,6 @@ func (r *vehicleRepo) Exists(ctx context.Context, regNum string) (bool, error) {
 func (r *vehicleRepo) GetByPersonID(ctx context.Context, personID uint64) ([]entity.Vehicle, error) {
 	query, args, err := sq.Select("*").From("vehicles").Where(sq.Eq{"person_id": personID}).Limit(1).
 		PlaceholderFormat(sq.Dollar).ToSql()
-
 	if err != nil {
 		return nil, err
 	}
