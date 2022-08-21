@@ -11,7 +11,7 @@ import (
 )
 
 func TestCreatePerson(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
+	t.Run("success create / all params are valid", func(t *testing.T) {
 		// Arrange
 		f := setUpPersonRepoFixture(t)
 		defer f.tearDownPersonRepoFixture()
@@ -36,7 +36,7 @@ func TestCreatePerson(t *testing.T) {
 }
 
 func TestUpdatePerson(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
+	t.Run("success update / all params are valid", func(t *testing.T) {
 		// Arrange
 		f := setUpPersonRepoFixture(t)
 		defer f.tearDownPersonRepoFixture()
@@ -59,7 +59,7 @@ func TestUpdatePerson(t *testing.T) {
 }
 
 func TestDeletePerson(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
+	t.Run("success delete / all params are valid", func(t *testing.T) {
 		// Arrange
 		f := setUpPersonRepoFixture(t)
 		defer f.tearDownPersonRepoFixture()
@@ -78,7 +78,7 @@ func TestDeletePerson(t *testing.T) {
 }
 
 func TestGetPerson(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
+	t.Run("success get / all params are valid", func(t *testing.T) {
 		// Arrange
 		f := setUpPersonRepoFixture(t)
 		defer f.tearDownPersonRepoFixture()
@@ -102,7 +102,7 @@ func TestGetPerson(t *testing.T) {
 }
 
 func TestListPerson(t *testing.T) {
-	t.Run("success/limit < count", func(t *testing.T) {
+	t.Run("success get list / limit < count", func(t *testing.T) {
 		// Arrange
 		f := setUpPersonRepoFixture(t)
 		defer f.tearDownPersonRepoFixture()
@@ -140,7 +140,7 @@ func TestListPerson(t *testing.T) {
 		assert.Equal(t, arg1, result.Persons[0].FirstName)
 		assert.Equal(t, arg2, result.Persons[0].LastName)
 	})
-	t.Run("success/limit > count", func(t *testing.T) {
+	t.Run("success get list / limit > count", func(t *testing.T) {
 		// Arrange
 		f := setUpPersonRepoFixture(t)
 		defer f.tearDownPersonRepoFixture()
@@ -178,7 +178,7 @@ func TestListPerson(t *testing.T) {
 		assert.Equal(t, arg1, result.Persons[0].FirstName)
 		assert.Equal(t, arg2, result.Persons[0].LastName)
 	})
-	t.Run("success/offset > count", func(t *testing.T) {
+	t.Run("success get list / offset > count", func(t *testing.T) {
 		// Arrange
 		f := setUpPersonRepoFixture(t)
 		defer f.tearDownPersonRepoFixture()
@@ -213,7 +213,7 @@ func TestListPerson(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, count, result.Total)
 	})
-	t.Run("order is empty", func(t *testing.T) {
+	t.Run("success get list / order is empty", func(t *testing.T) {
 		// Arrange
 		f := setUpPersonRepoFixture(t)
 		defer f.tearDownPersonRepoFixture()

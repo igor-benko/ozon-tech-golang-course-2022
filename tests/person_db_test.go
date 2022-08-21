@@ -10,8 +10,10 @@ import (
 )
 
 func TestDB(t *testing.T) {
+	t.Parallel()
+
 	t.Run("Create", func(t *testing.T) {
-		t.Run("success", func(t *testing.T) {
+		t.Run("success / all params are valid", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()
@@ -30,7 +32,7 @@ func TestDB(t *testing.T) {
 		})
 	})
 	t.Run("Update", func(t *testing.T) {
-		t.Run("success", func(t *testing.T) {
+		t.Run("success / all params are valid", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()
@@ -53,7 +55,7 @@ func TestDB(t *testing.T) {
 			// Assert
 			require.NoError(t, err)
 		})
-		t.Run("success/no person", func(t *testing.T) {
+		t.Run("success / no person", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()
@@ -72,7 +74,7 @@ func TestDB(t *testing.T) {
 		})
 	})
 	t.Run("Delete", func(t *testing.T) {
-		t.Run("success", func(t *testing.T) {
+		t.Run("success / all params are valid", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()
@@ -93,7 +95,7 @@ func TestDB(t *testing.T) {
 			// Assert
 			require.NoError(t, err)
 		})
-		t.Run("success/no person", func(t *testing.T) {
+		t.Run("success / no person", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()
@@ -112,7 +114,7 @@ func TestDB(t *testing.T) {
 		})
 	})
 	t.Run("Get", func(t *testing.T) {
-		t.Run("success", func(t *testing.T) {
+		t.Run("success / all params are valid", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()
@@ -136,7 +138,7 @@ func TestDB(t *testing.T) {
 			assert.Equal(t, person.LastName, result2.LastName)
 			assert.Equal(t, result1, result2.ID)
 		})
-		t.Run("success/no person", func(t *testing.T) {
+		t.Run("success / no person", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()
@@ -155,7 +157,7 @@ func TestDB(t *testing.T) {
 		})
 	})
 	t.Run("List", func(t *testing.T) {
-		t.Run("success", func(t *testing.T) {
+		t.Run("success / all params are valid", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()
@@ -184,7 +186,7 @@ func TestDB(t *testing.T) {
 			assert.Equal(t, person.FirstName, result2.Persons[0].FirstName)
 			assert.Equal(t, person.LastName, result2.Persons[0].LastName)
 		})
-		t.Run("success/no person", func(t *testing.T) {
+		t.Run("success / no person", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()

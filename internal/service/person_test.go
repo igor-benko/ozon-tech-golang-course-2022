@@ -11,7 +11,7 @@ import (
 )
 
 func TestCreatePerson(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
+	t.Run("success create / all params are valid", func(t *testing.T) {
 		// Arrange
 		f := setUpPersonServiceFixture(t)
 
@@ -37,7 +37,7 @@ func TestCreatePerson(t *testing.T) {
 }
 
 func TestUpdatePerson(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
+	t.Run("success update / all params are valid", func(t *testing.T) {
 		// Arrange
 		f := setUpPersonServiceFixture(t)
 
@@ -64,7 +64,7 @@ func TestUpdatePerson(t *testing.T) {
 }
 
 func TestDeletePerson(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
+	t.Run("success delete / all params are valid", func(t *testing.T) {
 		// Arrange
 		f := setUpPersonServiceFixture(t)
 
@@ -84,7 +84,7 @@ func TestDeletePerson(t *testing.T) {
 }
 
 func TestGetPerson(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
+	t.Run("success get / all params are valid", func(t *testing.T) {
 		// Arrange
 		f := setUpPersonServiceFixture(t)
 

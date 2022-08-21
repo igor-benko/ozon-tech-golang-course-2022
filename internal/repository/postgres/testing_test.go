@@ -15,6 +15,8 @@ type personRepoFixture struct {
 }
 
 func setUpPersonRepoFixture(t *testing.T) personRepoFixture {
+	t.Parallel()
+
 	ctrl := gomock.NewController(t)
 	pool := pgxpoolmock.NewMockPgxPool(ctrl)
 	repo := NewPersonRepo(pool)

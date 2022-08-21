@@ -10,8 +10,10 @@ import (
 )
 
 func TestService(t *testing.T) {
+	t.Parallel()
+
 	t.Run("Create", func(t *testing.T) {
-		t.Run("success", func(t *testing.T) {
+		t.Run("success / all params are valid", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()
@@ -30,7 +32,7 @@ func TestService(t *testing.T) {
 		})
 	})
 	t.Run("Update", func(t *testing.T) {
-		t.Run("success", func(t *testing.T) {
+		t.Run("success / all params are valid", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()
@@ -57,7 +59,7 @@ func TestService(t *testing.T) {
 			// Assert
 			require.NoError(t, err)
 		})
-		t.Run("success/no person", func(t *testing.T) {
+		t.Run("success / no person", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()
@@ -75,7 +77,7 @@ func TestService(t *testing.T) {
 		})
 	})
 	t.Run("Delete", func(t *testing.T) {
-		t.Run("success", func(t *testing.T) {
+		t.Run("success / all params are valid", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()
@@ -99,7 +101,7 @@ func TestService(t *testing.T) {
 			// Assert
 			require.NoError(t, err)
 		})
-		t.Run("success/no person", func(t *testing.T) {
+		t.Run("success / no person", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()
@@ -116,7 +118,7 @@ func TestService(t *testing.T) {
 		})
 	})
 	t.Run("Get", func(t *testing.T) {
-		t.Run("success", func(t *testing.T) {
+		t.Run("success / all params are valid", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()
@@ -143,7 +145,7 @@ func TestService(t *testing.T) {
 			assert.Equal(t, personCreate.LastName, result2.Person.LastName)
 			assert.Equal(t, result1.Id, result2.Person.Id)
 		})
-		t.Run("success/no person", func(t *testing.T) {
+		t.Run("success / no person", func(t *testing.T) {
 			// Arrange
 			setUpPool()
 			defer tearDownPool()

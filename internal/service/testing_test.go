@@ -21,6 +21,8 @@ type personServiceFixture struct {
 }
 
 func setUpPersonServiceFixture(t *testing.T) personServiceFixture {
+	t.Parallel()
+
 	cfg, err := config.Init()
 	if err != nil {
 		log.Fatal(err)
