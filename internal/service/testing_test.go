@@ -2,12 +2,12 @@ package service
 
 import (
 	"context"
-	"log"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
 	storage "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository"
+	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/logger"
 )
 
 type personServiceFixture struct {
@@ -25,7 +25,7 @@ func setUpPersonServiceFixture(t *testing.T) personServiceFixture {
 
 	cfg, err := config.Init()
 	if err != nil {
-		log.Fatal(err)
+		logger.FatalKV(err.Error())
 	}
 
 	ctx := context.Background()

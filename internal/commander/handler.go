@@ -24,13 +24,13 @@ func (c *personHandler) Create(ctx context.Context, args ...string) string {
 		return "Неправильный формат. Должно быть /person create фамилия имя"
 	}
 
-	id, err := c.client.CreatePerson(ctx, args[1], args[2])
+	err := c.client.CreatePerson(ctx, args[1], args[2])
 
 	if err != nil {
 		return fmt.Sprintf("Ошибка создания персоны: %s", err)
 	}
 
-	return fmt.Sprintf("Создана персона с ID: %d", id)
+	return "Персона создана"
 }
 
 func (c *personHandler) Update(ctx context.Context, args ...string) string {

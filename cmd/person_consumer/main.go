@@ -1,7 +1,7 @@
 package main
 
 import (
-	"gitlab.ozon.dev/igor.benko.1991/homework/internal/app/server"
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/app/person_consumer"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
 	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/logger"
 )
@@ -12,7 +12,7 @@ func main() {
 		logger.FatalKV(err.Error())
 	}
 
-	logger.WithAppName(cfg.PersonService.AppName)
+	logger.WithAppName(cfg.PersonConsumer.AppName)
 
-	server.Run(*cfg)
+	person_consumer.Run(*cfg)
 }

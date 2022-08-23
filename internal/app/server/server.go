@@ -19,6 +19,7 @@ import (
 	postgres_repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository/postgres"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/service"
 	pb "gitlab.ozon.dev/igor.benko.1991/homework/pkg/api"
+	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/logger"
 	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/postgres"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -42,12 +43,12 @@ func Run(cfg config.Config) {
 	if cfg.PersonService.Storage == config.StoragePostgres {
 		err := postgres.Migrate(context.Background(), &cfg.Database)
 		if err != nil {
-			log.Fatal(err)
+			logger.FatalKV(err.Error())
 		}
 
 		pool, err := postgres.New(context.Background(), &cfg.Pooler)
 		if err != nil {
-			log.Fatal(err)
+			logger.FatalKV(err.Error())
 		}
 
 		defer pool.Close()
@@ -60,7 +61,7 @@ func Run(cfg config.Config) {
 		vehicleRepo = memory_repo.NewVehicleRepo(cfg.Storage)
 
 	} else {
-		log.Fatalf("Unsupported storage type %s", cfg.PersonService.Storage)
+		logger.Fatalf("Unsupported storage type %s", cfg.PersonService.Storage)
 	}
 
 	// Инициализация сервиса
@@ -70,7 +71,7 @@ func Run(cfg config.Config) {
 	// GRPC
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.PersonService.Port))
 	if err != nil {
-		log.Fatal(err)
+		logger.FatalKV(err.Error())
 	}
 
 	grpcServer := grpc.NewServer()
@@ -79,9 +80,9 @@ func Run(cfg config.Config) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		log.Println("Grpc started!")
+		logger.Infof("Grpc started!")
 		if err = grpcServer.Serve(listener); err != nil {
-			log.Println(err)
+			logger.Errorf(err.Error())
 			cancel()
 		}
 	}()
@@ -89,9 +90,9 @@ func Run(cfg config.Config) {
 	// GRPC http gateway
 	gatewayServer := createGatewayServer(cfg.PersonService.Port, cfg.PersonService.GatewayPort)
 	go func() {
-		log.Println("Grpc gateway started!")
+		logger.Infof("Grpc gateway started!")
 		if err := gatewayServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Println(err)
+			logger.Errorf(err.Error())
 			cancel()
 		}
 	}()
@@ -114,11 +115,11 @@ func Run(cfg config.Config) {
 	if err := gatewayServer.Shutdown(ctx); err != nil {
 		log.Printf("Error on gatewayServer stop: %s\n", err)
 	} else {
-		log.Println("gatewayServer stopped")
+		logger.Infof("gatewayServer stopped")
 	}
 
 	grpcServer.GracefulStop()
-	log.Println("Grpc server stopped")
+	logger.Infof("Grpc server stopped")
 }
 
 func createGatewayServer(grpcPort, httpPort int) *http.Server {
@@ -127,11 +128,11 @@ func createGatewayServer(grpcPort, httpPort int) *http.Server {
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	if err := pb.RegisterPersonServiceHandlerFromEndpoint(ctx, mux, fmt.Sprintf(":%d", grpcPort), opts); err != nil {
-		log.Fatal(err)
+		logger.FatalKV(err.Error())
 	}
 
 	if err := pb.RegisterVehicleServiceHandlerFromEndpoint(ctx, mux, fmt.Sprintf(":%d", grpcPort), opts); err != nil {
-		log.Fatal(err)
+		logger.FatalKV(err.Error())
 	}
 
 	router := gin.New()

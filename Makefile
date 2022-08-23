@@ -46,6 +46,12 @@ run-server:
 	./server
 .PHONY: run-server
 
+run-person-consumer:
+	go mod tidy && \
+	go build -o person_consumer ./cmd/person_consumer && \
+	./person_consumer
+.PHONY: run-person-consumer
+
 add-migration:
 	goose -dir ./migrations create $(name) sql
 .PHONY: add-migration

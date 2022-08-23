@@ -2,4 +2,6 @@
 /app
 /server
 /bot
+/person_consumer
 bin
+kafka_data

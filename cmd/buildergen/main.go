@@ -8,9 +8,10 @@ import (
 	"go/token"
 	"html/template"
 	"io/ioutil"
-	"log"
 	"path/filepath"
 	"strings"
+
+	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/logger"
 )
 
 const (
@@ -27,15 +28,15 @@ func init() {
 
 func main() {
 	if originalFileName == "" {
-		log.Fatalf("filename is empty. Use -%s for set", fileNameFlag)
+		logger.Fatalf("filename is empty. Use -%s for set", fileNameFlag)
 	}
 	if len(originalFileName) < 4 || originalFileName[len(originalFileName)-3:] != goExt {
-		log.Fatalf("file isn't go format. Use go file")
+		logger.Fatalf("file isn't go format. Use go file")
 	}
 
 	f, err := parser.ParseFile(token.NewFileSet(), originalFileName, nil, parser.AllErrors)
 	if err != nil {
-		log.Fatalf("parse error: %s", err.Error())
+		logger.Fatalf("parse error: %s", err.Error())
 	}
 
 	p := Package{}
@@ -95,12 +96,12 @@ func main() {
 
 	t, err := template.New("builder").Parse(templ)
 	if err != nil {
-		log.Fatalf("templater error: %s", err.Error())
+		logger.Fatalf("templater error: %s", err.Error())
 	}
 
 	b := &bytes.Buffer{}
 	if err = t.Execute(b, p); err != nil {
-		log.Fatalf("execute template error: %s", err.Error())
+		logger.Fatalf("execute template error: %s", err.Error())
 	}
 
 	fn := strings.TrimRight(filepath.Base(originalFileName), goExt) + "_builder" + goExt
