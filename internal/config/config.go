@@ -13,13 +13,15 @@ const (
 )
 
 type Config struct {
-	PersonService  PersonServiceConfig  `yaml:"person_service"`
-	PersonConsumer PersonConsumerConfig `yaml:"person_consumer"`
-	Storage        StorageConfig        `yaml:"storage"`
-	Telegram       TelegramConfig       `yaml:"telegram"`
-	Pooler         PoolerConfig         `yaml:"pooler"`
-	Database       DatabaseConfig       `yaml:"database"`
-	Kafka          KafkaConfig          `yaml:"kafka"`
+	PersonService    PersonServiceConfig    `yaml:"person_service"`
+	PersonConsumer   PersonConsumerConfig   `yaml:"person_consumer"`
+	VerifyConsumer   VerifyConsumerConfig   `yaml:"verify_consumer"`
+	RollbackConsumer RollbackConsumerConfig `yaml:"rollback_consumer"`
+	Storage          StorageConfig          `yaml:"storage"`
+	Telegram         TelegramConfig         `yaml:"telegram"`
+	Pooler           PoolerConfig           `yaml:"pooler"`
+	Database         DatabaseConfig         `yaml:"database"`
+	Kafka            KafkaConfig            `yaml:"kafka"`
 }
 
 type PersonServiceConfig struct {
@@ -33,6 +35,14 @@ type PersonConsumerConfig struct {
 	AppName    string `yaml:"app_name" env:"PERSON_CONSUMER_APP_NAME"`
 	GroupName  string `yaml:"group_name" env:"PERSON_CONSUMER_GROUP_NAME"`
 	ExpvarPort int    `yaml:"expvar_port" env:"PERSON_CONSUMER_EXPVAR_PORT"`
+}
+
+type VerifyConsumerConfig struct {
+	GroupName string `yaml:"group_name" env:"VERIFY_CONSUMER_GROUP_NAME"`
+}
+
+type RollbackConsumerConfig struct {
+	GroupName string `yaml:"group_name" env:"ROLLBACK_CONSUMER_GROUP_NAME"`
 }
 
 type StorageConfig struct {
@@ -70,6 +80,8 @@ type DatabaseConfig struct {
 type KafkaConfig struct {
 	Brokers     []string `yaml:"brokers" env:"KAFKA_BROKERS"`
 	IncomeTopic string   `yaml:"income_topic" env:"KAFKA_INCOME_TOPIC"`
+	VerifyTopic string   `yaml:"verify_topic" env:"KAFKA_VERIFY_TOPIC"`
+	ErrorTopic  string   `yaml:"error_topic" env:"KAFKA_ERROR_TOPIC"`
 }
 
 func Init() (*Config, error) {

@@ -62,17 +62,49 @@ func Run(cfg config.Config) {
 
 	// Инициализация брокера
 	config := sarama.NewConfig()
-	config.Consumer.Offsets.Initial = sarama.OffsetOldest
-	consumerGroup, err := sarama.NewConsumerGroup(cfg.Kafka.Brokers, cfg.PersonConsumer.GroupName, config)
+	config.Producer.Return.Successes = true
+	config.Consumer.Offsets.Initial = sarama.OffsetNewest
+
+	producer, err := sarama.NewSyncProducer(cfg.Kafka.Brokers, config)
 	if err != nil {
 		logger.FatalKV(err.Error())
 	}
 
-	broker := kafka.NewKafkaBroker(nil, consumerGroup)
-
-	consumer := consumer.NewPersonConsumer(broker, personRepo)
+	// Person consumer
+	personGroup, err := sarama.NewConsumerGroup(cfg.Kafka.Brokers, cfg.PersonConsumer.GroupName, config)
+	if err != nil {
+		logger.FatalKV(err.Error())
+	}
+	personBroker := kafka.NewKafkaBroker(producer, personGroup)
+	personConsumer := consumer.NewPersonConsumer(cfg, personBroker, personRepo)
 	go func() {
-		if err := consumer.Consume(ctx, cfg.Kafka.IncomeTopic); err != nil {
+		if err := personConsumer.Consume(ctx, cfg.Kafka.IncomeTopic); err != nil {
+			cancel()
+		}
+	}()
+
+	// Verify consumer
+	verifyGroup, err := sarama.NewConsumerGroup(cfg.Kafka.Brokers, cfg.VerifyConsumer.GroupName, config)
+	if err != nil {
+		logger.FatalKV(err.Error())
+	}
+	verifyBroker := kafka.NewKafkaBroker(producer, verifyGroup)
+	verifyConsumer := consumer.NewVerifyConsumer(cfg, verifyBroker, personRepo)
+	go func() {
+		if err := verifyConsumer.Consume(ctx, cfg.Kafka.VerifyTopic); err != nil {
+			cancel()
+		}
+	}()
+
+	// Rollbak consumer
+	rollbackGroup, err := sarama.NewConsumerGroup(cfg.Kafka.Brokers, cfg.RollbackConsumer.GroupName, config)
+	if err != nil {
+		logger.FatalKV(err.Error())
+	}
+	rollbackBroker := kafka.NewKafkaBroker(producer, rollbackGroup)
+	rollbackConsumer := consumer.NewRollbackConsumer(cfg, rollbackBroker, personRepo)
+	go func() {
+		if err := rollbackConsumer.Consume(ctx, cfg.Kafka.ErrorTopic); err != nil {
 			cancel()
 		}
 	}()
@@ -98,8 +130,6 @@ func Run(cfg config.Config) {
 	}
 
 	// Даем 5 сек на обработку текущих запросов
-
-	consumerGroup.Close()
 	logger.Infof("Grpc server stopped")
 }
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/opentracing/opentracing-go"
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/entity"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/broker"
 	storage "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository"
@@ -14,12 +15,14 @@ import (
 )
 
 type personConsumer struct {
+	cfg config.Config
+
 	repo   storage.PersonRepo
 	broker broker.Broker
 }
 
-func NewPersonConsumer(broker broker.Broker, repo storage.PersonRepo) *personConsumer {
-	return &personConsumer{broker: broker, repo: repo}
+func NewPersonConsumer(cfg config.Config, broker broker.Broker, repo storage.PersonRepo) *personConsumer {
+	return &personConsumer{cfg: cfg, broker: broker, repo: repo}
 }
 
 func (c *personConsumer) Consume(ctx context.Context, topic string) error {
@@ -64,7 +67,12 @@ func (c *personConsumer) handle(ctx context.Context, action string, person entit
 
 	switch action {
 	case "Create":
-		_, err = c.repo.Create(context.Background(), person)
+		var id uint64
+		id, err = c.repo.Create(context.Background(), person)
+		if err != nil {
+			return err
+		}
+		err = c.sendToVerify(ctx, id)
 	case "Update":
 		err = c.repo.Update(context.Background(), person)
 	case "Delete":
@@ -72,4 +80,26 @@ func (c *personConsumer) handle(ctx context.Context, action string, person entit
 	}
 
 	return err
+}
+
+func (c *personConsumer) sendToVerify(ctx context.Context, id uint64) error {
+	jsonData, err := json.Marshal(&entity.Person{
+		ID: id,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = c.broker.Publish(ctx, &broker.Message{
+		Topic:  c.cfg.Kafka.VerifyTopic,
+		Body:   jsonData,
+		Action: "Verify",
+		Ctx:    ctx,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

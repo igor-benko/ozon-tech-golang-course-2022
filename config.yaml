@@ -38,8 +38,16 @@ kafka:
   - 127.0.0.1:9096
   - 127.0.0.1:9097
   income_topic: person_income
+  verify_topic: person_verify
+  error_topic: person_error
   
 person_consumer:
   app_name: person_consumer
   group_name: person_group
   expvar_port: 8001
+
+verify_consumer:
+  group_name: verify_group
+
+rollback_consumer:
+  group_name: rollback_group
