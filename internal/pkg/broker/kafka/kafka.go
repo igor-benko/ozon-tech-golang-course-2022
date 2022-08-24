@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/broker"
 	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/logger"
@@ -33,15 +35,34 @@ func (b *kafkaBroker) Publish(ctx context.Context, msg *broker.Message) error {
 		}
 	}()
 
-	_, _, err = b.producer.SendMessage(&sarama.ProducerMessage{
-		Topic: msg.Topic,
-		Value: sarama.ByteEncoder(msg.Body),
-		Headers: []sarama.RecordHeader{
-			sarama.RecordHeader{
-				Key:   []byte("Action"),
-				Value: []byte(msg.Action),
-			},
+	headers := make(map[string]string)
+	span := opentracing.StartSpan(msg.Action, ext.SpanKindRPCClient)
+
+	opentracing.GlobalTracer().Inject(
+		span.Context(),
+		opentracing.TextMap,
+		opentracing.TextMapCarrier(headers))
+
+	defer span.Finish()
+
+	messageHeaders := []sarama.RecordHeader{
+		sarama.RecordHeader{
+			Key:   []byte("Action"),
+			Value: []byte(msg.Action),
 		},
+	}
+
+	for headerKey, headerValue := range headers {
+		messageHeaders = append(messageHeaders, sarama.RecordHeader{
+			Key:   []byte(headerKey),
+			Value: []byte(headerValue),
+		})
+	}
+
+	_, _, err = b.producer.SendMessage(&sarama.ProducerMessage{
+		Topic:   msg.Topic,
+		Value:   sarama.ByteEncoder(msg.Body),
+		Headers: messageHeaders,
 	})
 
 	return err

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,6 +13,8 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/uber/jaeger-client-go"
+	jaegercfg "github.com/uber/jaeger-client-go/config"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/consumer"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/broker/kafka"
@@ -29,6 +32,13 @@ const (
 func Run(cfg config.Config) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	closer, err := initTracing(cfg)
+	if err != nil {
+		logger.FatalKV(err.Error())
+	}
+
+	defer closer.Close()
 
 	// Инициализация хранилища
 	var personRepo repo.PersonRepo
@@ -101,4 +111,23 @@ func createExpvarServer(port int) *http.Server {
 		Addr:    fmt.Sprintf(":%d", port),
 		Handler: mux,
 	}
+}
+
+func initTracing(cfg config.Config) (io.Closer, error) {
+	c := &jaegercfg.Configuration{
+		Sampler: &jaegercfg.SamplerConfig{
+			Type:  jaeger.SamplerTypeConst,
+			Param: 1,
+		},
+		Reporter: &jaegercfg.ReporterConfig{
+			LogSpans: true,
+		},
+	}
+
+	closer, err := c.InitGlobalTracer(cfg.PersonConsumer.AppName)
+	if err != nil {
+		return nil, err
+	}
+
+	return closer, nil
 }

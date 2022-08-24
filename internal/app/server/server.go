@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -25,7 +26,12 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/gin-gonic/gin"
+	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/opentracing/opentracing-go"
+
+	"github.com/uber/jaeger-client-go"
+	jaegercfg "github.com/uber/jaeger-client-go/config"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -36,6 +42,13 @@ const (
 )
 
 func Run(cfg config.Config) {
+	closer, err := initTracing(cfg)
+	if err != nil {
+		logger.FatalKV(err.Error())
+	}
+
+	defer closer.Close()
+
 	// Инициализация хранилища
 	var personRepo repo.PersonRepo
 	var vehicleRepo repo.VehicleRepo
@@ -74,7 +87,19 @@ func Run(cfg config.Config) {
 		logger.FatalKV(err.Error())
 	}
 
-	grpcServer := grpc.NewServer()
+	tracing_opts := []grpc_opentracing.Option{
+		grpc_opentracing.WithTracer(opentracing.GlobalTracer()),
+	}
+
+	grpcServer := grpc.NewServer(
+		grpc.StreamInterceptor(
+			grpc_opentracing.StreamServerInterceptor(tracing_opts...),
+		),
+
+		grpc.UnaryInterceptor(
+			grpc_opentracing.UnaryServerInterceptor(tracing_opts...),
+		),
+	)
 	pb.RegisterPersonServiceServer(grpcServer, &personService)
 	pb.RegisterVehicleServiceServer(grpcServer, &vehicleService)
 
@@ -150,4 +175,23 @@ func createGatewayServer(grpcPort, httpPort int) *http.Server {
 		Addr:    fmt.Sprintf(":%d", httpPort),
 		Handler: router,
 	}
+}
+
+func initTracing(cfg config.Config) (io.Closer, error) {
+	c := &jaegercfg.Configuration{
+		Sampler: &jaegercfg.SamplerConfig{
+			Type:  jaeger.SamplerTypeConst,
+			Param: 1,
+		},
+		Reporter: &jaegercfg.ReporterConfig{
+			LogSpans: true,
+		},
+	}
+
+	closer, err := c.InitGlobalTracer(cfg.PersonService.AppName)
+	if err != nil {
+		return nil, err
+	}
+
+	return closer, nil
 }

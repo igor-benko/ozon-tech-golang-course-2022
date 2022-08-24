@@ -3,6 +3,7 @@ package broker
 import "context"
 
 type Message struct {
+	Ctx    context.Context
 	Topic  string
 	Action string
 	Body   []byte

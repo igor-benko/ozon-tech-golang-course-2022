@@ -5,6 +5,7 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,8 +21,15 @@ import (
 	"github.com/Shopify/sarama"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
+	"github.com/opentracing/opentracing-go"
 	pb "gitlab.ozon.dev/igor.benko.1991/homework/pkg/api"
 	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/logger"
+
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+
+	"github.com/uber/jaeger-client-go"
+	jaegercfg "github.com/uber/jaeger-client-go/config"
 )
 
 func Run(cfg config.Config) {
@@ -31,16 +39,34 @@ func Run(cfg config.Config) {
 	}
 	bot.Debug = true
 
+	closer, err := initTracing(cfg)
+	if err != nil {
+		logger.FatalKV(err.Error())
+	}
+
+	defer closer.Close()
+
 	// Инициализация сервисов
-	opts := []grpc_retry.CallOption{
+	retry_opts := []grpc_retry.CallOption{
 		grpc_retry.WithBackoff(grpc_retry.BackoffLinear(time.Duration(cfg.Telegram.RetryIntervalMs) * time.Millisecond)),
 		grpc_retry.WithMax(cfg.Telegram.RetryMax),
 	}
 
+	tracing_opts := []grpc_opentracing.Option{
+		grpc_opentracing.WithTracer(opentracing.GlobalTracer()),
+	}
+
 	conn, err := grpc.Dial(cfg.Telegram.PersonService,
 		grpc.WithInsecure(),
-		grpc.WithStreamInterceptor(grpc_retry.StreamClientInterceptor(opts...)),
-		grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(opts...)))
+		grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(
+			grpc_retry.StreamClientInterceptor(retry_opts...),
+			grpc_opentracing.StreamClientInterceptor(tracing_opts...),
+		)),
+
+		grpc.WithUnaryInterceptor(grpc_middleware.ChainUnaryClient(
+			grpc_retry.UnaryClientInterceptor(retry_opts...),
+			grpc_opentracing.UnaryClientInterceptor(tracing_opts...),
+		)))
 	if err != nil {
 		logger.FatalKV(err.Error())
 	}
@@ -106,4 +132,23 @@ func createExpvarServer(port int) *http.Server {
 		Addr:    fmt.Sprintf(":%d", port),
 		Handler: mux,
 	}
+}
+
+func initTracing(cfg config.Config) (io.Closer, error) {
+	c := &jaegercfg.Configuration{
+		Sampler: &jaegercfg.SamplerConfig{
+			Type:  jaeger.SamplerTypeConst,
+			Param: 1,
+		},
+		Reporter: &jaegercfg.ReporterConfig{
+			LogSpans: true,
+		},
+	}
+
+	closer, err := c.InitGlobalTracer(cfg.Telegram.AppName)
+	if err != nil {
+		return nil, err
+	}
+
+	return closer, nil
 }

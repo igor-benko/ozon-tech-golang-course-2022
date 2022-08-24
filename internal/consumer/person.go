@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 
+	"github.com/opentracing/opentracing-go"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/entity"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/broker"
 	storage "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository"
@@ -39,15 +41,18 @@ func (c *personConsumer) Consume(ctx context.Context, topic string) error {
 				break
 			}
 
-			if err = c.handle(msg.Action, person); err != nil {
+			if err = c.handle(msg.Ctx, msg.Action, person); err != nil {
 				logger.Errorf(err.Error())
 			}
 		}
 	}
 }
 
-func (c *personConsumer) handle(action string, person entity.Person) error {
+func (c *personConsumer) handle(ctx context.Context, action string, person entity.Person) error {
 	var err error
+
+	span, _ := opentracing.StartSpanFromContext(ctx, fmt.Sprintf("handle_%s", action))
+	defer span.Finish()
 
 	defer func() {
 		if err != nil {

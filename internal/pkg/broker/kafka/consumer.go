@@ -2,10 +2,12 @@ package kafka
 
 import (
 	"context"
-	"log"
 
 	"github.com/Shopify/sarama"
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/broker"
+	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/logger"
 )
 
 type Consumer interface {
@@ -28,30 +30,44 @@ func (c *consumerHandler) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	for {
 		select {
 		case <-session.Context().Done():
-			log.Print("Done")
+			logger.Infof("Done")
 			return nil
 		case msg, ok := <-claim.Messages():
 			if !ok {
-				log.Print("Data channel closed")
+				logger.Infof("Data channel closed")
 				return nil
 			}
 
 			got_from_kafka.Inc()
 
 			action := ""
+			headers := make(map[string]string)
 			for _, h := range msg.Headers {
 				if string(h.Key) == "Action" {
 					action = string(h.Value)
-					break
+				} else {
+					headers[string(h.Key)] = string(h.Value)
 				}
 			}
+
+			spanContext, err := opentracing.GlobalTracer().Extract(opentracing.TextMap, opentracing.TextMapCarrier(headers))
+			if err != nil {
+				logger.Errorf(err.Error())
+			}
+
+			span := opentracing.StartSpan(
+				action,
+				ext.RPCServerOption(spanContext))
 
 			c.messagesCh <- &broker.Message{
 				Topic:  msg.Topic,
 				Action: action,
 				Body:   msg.Value,
+				Ctx:    opentracing.ContextWithSpan(context.Background(), span),
 			}
 			session.MarkMessage(msg, "")
+
+			defer span.Finish()
 		}
 	}
 }
