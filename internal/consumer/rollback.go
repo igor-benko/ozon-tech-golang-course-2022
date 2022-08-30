@@ -13,6 +13,8 @@ import (
 	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/logger"
 )
 
+const HandleRollback = "handle_rollback"
+
 type rollbackConsumer struct {
 	cfg config.Config
 
@@ -40,6 +42,7 @@ func (c *rollbackConsumer) Consume(ctx context.Context, topic string) error {
 			}
 			person := entity.Person{}
 			if err := json.Unmarshal(msg.Body, &person); err != nil {
+				logger.Errorf("Consumer error: %v", err)
 				break
 			}
 
@@ -53,7 +56,7 @@ func (c *rollbackConsumer) Consume(ctx context.Context, topic string) error {
 func (c *rollbackConsumer) handle(ctx context.Context, id uint64) error {
 	var err error
 
-	span, _ := opentracing.StartSpanFromContext(ctx, "handle_rollback")
+	span, ctx := opentracing.StartSpanFromContext(ctx, HandleRollback)
 	defer span.Finish()
 
 	defer func() {

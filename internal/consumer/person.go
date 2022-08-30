@@ -41,6 +41,7 @@ func (c *personConsumer) Consume(ctx context.Context, topic string) error {
 			}
 			person := entity.Person{}
 			if err := json.Unmarshal(msg.Body, &person); err != nil {
+				logger.Errorf("Consumer error: %v", err)
 				break
 			}
 
@@ -54,7 +55,7 @@ func (c *personConsumer) Consume(ctx context.Context, topic string) error {
 func (c *personConsumer) handle(ctx context.Context, action string, person entity.Person) error {
 	var err error
 
-	span, _ := opentracing.StartSpanFromContext(ctx, fmt.Sprintf("handle_%s", action))
+	span, ctx := opentracing.StartSpanFromContext(ctx, fmt.Sprintf("handle_%s", action))
 	defer span.Finish()
 
 	defer func() {
@@ -66,16 +67,16 @@ func (c *personConsumer) handle(ctx context.Context, action string, person entit
 	}()
 
 	switch action {
-	case "Create":
+	case entity.ActionCreate:
 		var id uint64
 		id, err = c.repo.Create(context.Background(), person)
 		if err != nil {
 			return err
 		}
 		err = c.sendToVerify(ctx, id)
-	case "Update":
+	case entity.ActionUpdate:
 		err = c.repo.Update(context.Background(), person)
-	case "Delete":
+	case entity.ActionDelete:
 		err = c.repo.Delete(context.Background(), person.ID)
 	}
 
@@ -83,23 +84,14 @@ func (c *personConsumer) handle(ctx context.Context, action string, person entit
 }
 
 func (c *personConsumer) sendToVerify(ctx context.Context, id uint64) error {
-	jsonData, err := json.Marshal(&entity.Person{
+	jsonData, _ := json.Marshal(&entity.Person{
 		ID: id,
 	})
-	if err != nil {
-		return err
-	}
 
-	err = c.broker.Publish(ctx, &broker.Message{
+	return c.broker.Publish(ctx, &broker.Message{
 		Topic:  c.cfg.Kafka.VerifyTopic,
 		Body:   jsonData,
-		Action: "Verify",
+		Action: entity.ActionVerify,
 		Ctx:    ctx,
 	})
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

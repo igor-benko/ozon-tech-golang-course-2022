@@ -41,24 +41,8 @@ func Run(cfg config.Config) {
 	defer closer.Close()
 
 	// Инициализация хранилища
-	var personRepo repo.PersonRepo
-
-	if cfg.PersonService.Storage == config.StoragePostgres {
-		pool, err := postgres.New(context.Background(), &cfg.Pooler)
-		if err != nil {
-			logger.FatalKV(err.Error())
-		}
-
-		defer pool.Close()
-
-		personRepo = postgres_repo.NewPersonRepo(pool)
-
-	} else if cfg.PersonService.Storage == config.StorageMemory {
-		personRepo = memory_repo.NewPersonRepo(cfg.Storage)
-
-	} else {
-		logger.Fatalf("Unsupported storage type %s", cfg.PersonService.Storage)
-	}
+	personRepo, close := initPersonRepo(cfg)
+	defer close()
 
 	// Инициализация брокера
 	config := sarama.NewConfig()
@@ -160,4 +144,26 @@ func initTracing(cfg config.Config) (io.Closer, error) {
 	}
 
 	return closer, nil
+}
+
+type Closer func()
+
+var NoCloser = func() {}
+
+func initPersonRepo(cfg config.Config) (repo.PersonRepo, Closer) {
+	if cfg.PersonService.Storage == config.StoragePostgres {
+		pool, err := postgres.New(context.Background(), &cfg.Pooler)
+		if err != nil {
+			logger.FatalKV(err.Error())
+		}
+
+		return postgres_repo.NewPersonRepo(pool), pool.Close
+
+	} else if cfg.PersonService.Storage == config.StorageMemory {
+		return memory_repo.NewPersonRepo(cfg.Storage), NoCloser
+
+	}
+
+	logger.Warnf("Unsupported storage type %s. Using in-memory", cfg.PersonService.Storage)
+	return memory_repo.NewPersonRepo(cfg.Storage), NoCloser
 }

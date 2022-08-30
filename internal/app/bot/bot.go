@@ -7,9 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/commander"
@@ -32,7 +29,7 @@ import (
 	jaegercfg "github.com/uber/jaeger-client-go/config"
 )
 
-func Run(cfg config.Config) {
+func Run(ctx context.Context, cfg config.Config) {
 	bot, err := tgbotapi.NewBotAPI(cfg.Telegram.ApiKey)
 	if err != nil {
 		logger.FatalKV(err.Error())
@@ -92,29 +89,23 @@ func Run(cfg config.Config) {
 	go commander.Run()
 
 	// Запуск expvar сервера
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	srv := createExpvarServer(cfg.Telegram.ExpvarPort)
 	go func() {
+		defer cancel()
 		logger.Infof("Grpc gateway started!")
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Errorf(err.Error())
-			cancel()
 		}
 	}()
 
 	logger.Infof("Bot started!")
 	// Так называемый, gracefull shutdown
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
-	select {
-	case v := <-interrupt:
-		logger.Infof("signal.Notify: %s\n", v)
-	case done := <-ctx.Done():
-		logger.Infof("ctx.Done: %s\n", done)
-	}
+	<-ctx.Done()
+	logger.Infof("ctx.Done:\n")
 
 	// Закрываем канал с updates
 	commander.Stop()
@@ -145,10 +136,5 @@ func initTracing(cfg config.Config) (io.Closer, error) {
 		},
 	}
 
-	closer, err := c.InitGlobalTracer(cfg.Telegram.AppName)
-	if err != nil {
-		return nil, err
-	}
-
-	return closer, nil
+	return c.InitGlobalTracer(cfg.Telegram.AppName)
 }

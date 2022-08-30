@@ -11,5 +11,5 @@ func (c *Counter) Inc() {
 }
 
 func (c *Counter) Get() uint64 {
-	return c.count
+	return atomic.LoadUint64(&c.count)
 }

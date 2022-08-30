@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/entity"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/broker"
 	pb "gitlab.ozon.dev/igor.benko.1991/homework/pkg/api"
 )
@@ -39,49 +40,40 @@ func NewPersonClient(cfg config.Config, client pb.PersonServiceClient, broker br
 }
 
 func (s *personClient) CreatePerson(ctx context.Context, lastName, firstName string) error {
-	jsonData, err := json.Marshal(&PersonDto{
+	jsonData, _ := json.Marshal(&PersonDto{
 		LastName:  lastName,
 		FirstName: firstName,
 	})
-	if err != nil {
-		return err
-	}
 
 	return s.broker.Publish(ctx, &broker.Message{
 		Topic:  s.cfg.Kafka.IncomeTopic,
-		Action: "Create",
+		Action: entity.ActionCreate,
 		Body:   jsonData,
 	})
 }
 
 func (s *personClient) UpdatePerson(ctx context.Context, id uint64, lastName, firstName string) error {
-	jsonData, err := json.Marshal(&PersonDto{
+	jsonData, _ := json.Marshal(&PersonDto{
 		ID:        id,
 		LastName:  lastName,
 		FirstName: firstName,
 	})
-	if err != nil {
-		return err
-	}
 
 	return s.broker.Publish(ctx, &broker.Message{
 		Topic:  s.cfg.Kafka.IncomeTopic,
-		Action: "Update",
+		Action: entity.ActionUpdate,
 		Body:   jsonData,
 	})
 }
 
 func (s *personClient) DeletePerson(ctx context.Context, id uint64) error {
-	jsonData, err := json.Marshal(&PersonDto{
+	jsonData, _ := json.Marshal(&PersonDto{
 		ID: id,
 	})
-	if err != nil {
-		return err
-	}
 
 	return s.broker.Publish(ctx, &broker.Message{
 		Topic:  s.cfg.Kafka.IncomeTopic,
-		Action: "Delete",
+		Action: entity.ActionDelete,
 		Body:   jsonData,
 	})
 }

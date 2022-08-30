@@ -13,6 +13,8 @@ import (
 	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/logger"
 )
 
+const HandleVerify = "handle_verify"
+
 type verifyConsumer struct {
 	cfg config.Config
 
@@ -40,6 +42,7 @@ func (c *verifyConsumer) Consume(ctx context.Context, topic string) error {
 			}
 			person := entity.Person{}
 			if err := json.Unmarshal(msg.Body, &person); err != nil {
+				logger.Errorf("Consumer error: %v", err)
 				break
 			}
 			if err = c.handle(msg.Ctx, person.ID); err != nil {
@@ -52,7 +55,7 @@ func (c *verifyConsumer) Consume(ctx context.Context, topic string) error {
 func (c *verifyConsumer) handle(ctx context.Context, id uint64) error {
 	var err error
 
-	span, _ := opentracing.StartSpanFromContext(ctx, "handle_verify")
+	span, ctx := opentracing.StartSpanFromContext(ctx, HandleVerify)
 	defer span.Finish()
 
 	defer func() {
@@ -69,19 +72,19 @@ func (c *verifyConsumer) handle(ctx context.Context, id uint64) error {
 	}
 
 	if person.LastName == "Ivanov" {
-		jsonData, err := json.Marshal(&entity.Person{
+		jsonData, _ := json.Marshal(&entity.Person{
 			ID: id,
+		})
+
+		err = c.broker.Publish(ctx, &broker.Message{
+			Topic:  c.cfg.Kafka.ErrorTopic,
+			Body:   jsonData,
+			Ctx:    ctx,
+			Action: entity.ActionRollback,
 		})
 		if err != nil {
 			return err
 		}
-
-		c.broker.Publish(ctx, &broker.Message{
-			Topic:  c.cfg.Kafka.ErrorTopic,
-			Body:   jsonData,
-			Ctx:    ctx,
-			Action: "Rollback",
-		})
 	}
 
 	return err
