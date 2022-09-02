@@ -1,17 +1,25 @@
 package main
 
 import (
-	"log"
+	"context"
+	"os/signal"
+	"syscall"
 
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/app/bot"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
+	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/logger"
 )
 
 func main() {
 	cfg, err := config.Init()
 	if err != nil {
-		log.Fatal(err)
+		logger.FatalKV(err.Error())
 	}
 
-	bot.Run(*cfg)
+	logger.WithAppName(cfg.Telegram.AppName)
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM)
+	defer stop()
+
+	bot.Run(ctx, *cfg)
 }

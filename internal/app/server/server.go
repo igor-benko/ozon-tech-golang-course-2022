@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"gitlab.ozon.dev/igor.benko.1991/homework/docs"
@@ -19,12 +17,18 @@ import (
 	postgres_repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository/postgres"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/service"
 	pb "gitlab.ozon.dev/igor.benko.1991/homework/pkg/api"
+	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/logger"
 	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/postgres"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/gin-gonic/gin"
+	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/opentracing/opentracing-go"
+
+	"github.com/uber/jaeger-client-go"
+	jaegercfg "github.com/uber/jaeger-client-go/config"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -34,78 +38,67 @@ const (
 	shotdownTimeout = 5 * time.Second
 )
 
-func Run(cfg config.Config) {
-	// Инициализация хранилища
-	var personRepo repo.PersonRepo
-	var vehicleRepo repo.VehicleRepo
-
-	if cfg.PersonService.Storage == config.StoragePostgres {
-		err := postgres.Migrate(context.Background(), &cfg.Database)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		pool, err := postgres.New(context.Background(), &cfg.Pooler)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		defer pool.Close()
-
-		personRepo = postgres_repo.NewPersonRepo(pool)
-		vehicleRepo = postgres_repo.NewVehicleRepo(pool)
-
-	} else if cfg.PersonService.Storage == config.StorageMemory {
-		personRepo = memory_repo.NewPersonRepo(cfg.Storage)
-		vehicleRepo = memory_repo.NewVehicleRepo(cfg.Storage)
-
-	} else {
-		log.Fatalf("Unsupported storage type %s", cfg.PersonService.Storage)
+func Run(ctx context.Context, cfg config.Config) {
+	closer, err := initTracing(cfg)
+	if err != nil {
+		logger.FatalKV(err.Error())
 	}
 
+	defer closer.Close()
+
+	// Инициализация хранилища
+	repos, close := initRepo(cfg)
+	defer close()
+
 	// Инициализация сервиса
-	personService := service.NewPersonService(personRepo, vehicleRepo, cfg)
-	vehicleService := service.NewVehicleService(vehicleRepo, cfg)
+	personService := service.NewPersonService(repos.person, repos.vehicle, cfg)
+	vehicleService := service.NewVehicleService(repos.vehicle, cfg)
 
 	// GRPC
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.PersonService.Port))
 	if err != nil {
-		log.Fatal(err)
+		logger.FatalKV(err.Error())
 	}
 
-	grpcServer := grpc.NewServer()
+	tracing_opts := []grpc_opentracing.Option{
+		grpc_opentracing.WithTracer(opentracing.GlobalTracer()),
+	}
+
+	grpcServer := grpc.NewServer(
+		grpc.StreamInterceptor(
+			grpc_opentracing.StreamServerInterceptor(tracing_opts...),
+		),
+
+		grpc.UnaryInterceptor(
+			grpc_opentracing.UnaryServerInterceptor(tracing_opts...),
+		),
+	)
 	pb.RegisterPersonServiceServer(grpcServer, &personService)
 	pb.RegisterVehicleServiceServer(grpcServer, &vehicleService)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	go func() {
-		log.Println("Grpc started!")
+		defer cancel()
+		logger.Infof("Grpc started!")
 		if err = grpcServer.Serve(listener); err != nil {
-			log.Println(err)
-			cancel()
+			logger.Errorf(err.Error())
 		}
 	}()
 
 	// GRPC http gateway
 	gatewayServer := createGatewayServer(cfg.PersonService.Port, cfg.PersonService.GatewayPort)
 	go func() {
-		log.Println("Grpc gateway started!")
+		defer cancel()
+		logger.Infof("Grpc gateway started!")
 		if err := gatewayServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Println(err)
-			cancel()
+			logger.Errorf(err.Error())
 		}
 	}()
 
 	// Так называемый, gracefull shutdown
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
-	select {
-	case v := <-interrupt:
-		log.Printf("signal.Notify: %s\n", v)
-	case done := <-ctx.Done():
-		log.Printf("ctx.Done: %s\n", done)
-	}
+	<-ctx.Done()
+	log.Printf("ctx.Done\n")
 
 	// Даем 5 сек на обработку текущих запросов
 	ctx, cancel = context.WithTimeout(context.Background(), shotdownTimeout)
@@ -114,11 +107,11 @@ func Run(cfg config.Config) {
 	if err := gatewayServer.Shutdown(ctx); err != nil {
 		log.Printf("Error on gatewayServer stop: %s\n", err)
 	} else {
-		log.Println("gatewayServer stopped")
+		logger.Infof("gatewayServer stopped")
 	}
 
 	grpcServer.GracefulStop()
-	log.Println("Grpc server stopped")
+	logger.Infof("Grpc server stopped")
 }
 
 func createGatewayServer(grpcPort, httpPort int) *http.Server {
@@ -127,11 +120,11 @@ func createGatewayServer(grpcPort, httpPort int) *http.Server {
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	if err := pb.RegisterPersonServiceHandlerFromEndpoint(ctx, mux, fmt.Sprintf(":%d", grpcPort), opts); err != nil {
-		log.Fatal(err)
+		logger.FatalKV(err.Error())
 	}
 
 	if err := pb.RegisterVehicleServiceHandlerFromEndpoint(ctx, mux, fmt.Sprintf(":%d", grpcPort), opts); err != nil {
-		log.Fatal(err)
+		logger.FatalKV(err.Error())
 	}
 
 	router := gin.New()
@@ -149,4 +142,59 @@ func createGatewayServer(grpcPort, httpPort int) *http.Server {
 		Addr:    fmt.Sprintf(":%d", httpPort),
 		Handler: router,
 	}
+}
+
+func initTracing(cfg config.Config) (io.Closer, error) {
+	c := &jaegercfg.Configuration{
+		Sampler: &jaegercfg.SamplerConfig{
+			Type:  jaeger.SamplerTypeConst,
+			Param: 1,
+		},
+		Reporter: &jaegercfg.ReporterConfig{
+			LogSpans: true,
+		},
+	}
+
+	closer, err := c.InitGlobalTracer(cfg.PersonService.AppName)
+	if err != nil {
+		return nil, err
+	}
+
+	return closer, nil
+}
+
+type Closer func()
+
+var NoCloser = func() {}
+
+type Repos struct {
+	person  repo.PersonRepo
+	vehicle repo.VehicleRepo
+}
+
+func initRepo(cfg config.Config) (Repos, Closer) {
+	if cfg.PersonService.Storage == config.StoragePostgres {
+		pool, err := postgres.New(context.Background(), &cfg.Pooler)
+		if err != nil {
+			logger.FatalKV(err.Error())
+		}
+
+		return Repos{
+			person:  postgres_repo.NewPersonRepo(pool),
+			vehicle: postgres_repo.NewVehicleRepo(pool),
+		}, NoCloser
+
+	} else if cfg.PersonService.Storage == config.StorageMemory {
+		return Repos{
+			person:  memory_repo.NewPersonRepo(cfg.Storage),
+			vehicle: memory_repo.NewVehicleRepo(cfg.Storage),
+		}, NoCloser
+
+	}
+
+	logger.Warnf("Unsupported storage type %s. Using in-memory", cfg.PersonService.Storage)
+	return Repos{
+		person:  memory_repo.NewPersonRepo(cfg.Storage),
+		vehicle: memory_repo.NewVehicleRepo(cfg.Storage),
+	}, NoCloser
 }

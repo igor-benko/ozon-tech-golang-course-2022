@@ -14,6 +14,7 @@ import (
 	postgres_repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository/postgres"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/service"
 	pb "gitlab.ozon.dev/igor.benko.1991/homework/pkg/api"
+	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/logger"
 	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/postgres"
 	"google.golang.org/grpc"
 )
@@ -30,18 +31,18 @@ var (
 func init() {
 	cfg, err := config.Init()
 	if err != nil {
-		log.Fatal(err)
+		logger.FatalKV(err.Error())
 	}
 
 	if cfg.PersonService.Storage == config.StoragePostgres {
 		err := postgres.Migrate(context.Background(), &cfg.Database)
 		if err != nil {
-			log.Fatal(err)
+			logger.FatalKV(err.Error())
 		}
 
 		pool, err = postgres.New(context.Background(), &cfg.Pooler)
 		if err != nil {
-			log.Fatal(err)
+			logger.FatalKV(err.Error())
 		}
 
 		personRepo = postgres_repo.NewPersonRepo(pool)
@@ -64,7 +65,7 @@ func init() {
 	// GRPC
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.PersonService.Port))
 	if err != nil {
-		log.Fatal(err)
+		logger.FatalKV(err.Error())
 	}
 
 	grpcServer := grpc.NewServer()
@@ -72,9 +73,9 @@ func init() {
 	pb.RegisterVehicleServiceServer(grpcServer, vehicleService)
 
 	go func() {
-		log.Println("Grpc started!")
+		logger.Infof("Grpc started!")
 		if err = grpcServer.Serve(listener); err != nil {
-			log.Println(err)
+			logger.Errorf(err.Error())
 		}
 	}()
 }
@@ -85,11 +86,11 @@ func setUpPool() {
 
 func tearDownPool() {
 	if _, err := pool.Exec(context.TODO(), "DELETE FROM vehicles"); err != nil {
-		log.Fatal(err)
+		logger.FatalKV(err.Error())
 	}
 
 	if _, err := pool.Exec(context.TODO(), "DELETE FROM persons"); err != nil {
-		log.Fatal(err)
+		logger.FatalKV(err.Error())
 	}
 
 	m.Unlock()

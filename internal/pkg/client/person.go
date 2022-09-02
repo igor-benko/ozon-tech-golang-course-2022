@@ -2,8 +2,12 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/entity"
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/broker"
 	pb "gitlab.ozon.dev/igor.benko.1991/homework/pkg/api"
 )
 
@@ -14,47 +18,64 @@ type PersonDto struct {
 }
 
 type PersonClient interface {
-	CreatePerson(ctx context.Context, lastName, firstName string) (uint64, error)
+	CreatePerson(ctx context.Context, lastName, firstName string) error
 	UpdatePerson(ctx context.Context, id uint64, lastName, firstName string) error
 	DeletePerson(ctx context.Context, id uint64) error
 	ListPerson(ctx context.Context, offset, limit uint64, order string) (<-chan *PersonDto, <-chan error)
 }
 
 type personClient struct {
+	cfg config.Config
+
 	client pb.PersonServiceClient
+	broker broker.Broker
 }
 
-func NewPersonClient(client pb.PersonServiceClient) *personClient {
+func NewPersonClient(cfg config.Config, client pb.PersonServiceClient, broker broker.Broker) *personClient {
 	return &personClient{
+		cfg:    cfg,
 		client: client,
+		broker: broker,
 	}
 }
 
-func (s *personClient) CreatePerson(ctx context.Context, lastName, firstName string) (uint64, error) {
-	resp, err := s.client.CreatePerson(ctx, &pb.CreatePersonRequest{
+func (s *personClient) CreatePerson(ctx context.Context, lastName, firstName string) error {
+	jsonData, _ := json.Marshal(&PersonDto{
 		LastName:  lastName,
 		FirstName: firstName,
 	})
 
-	return resp.GetId(), err
+	return s.broker.Publish(ctx, &broker.Message{
+		Topic:  s.cfg.Kafka.IncomeTopic,
+		Action: entity.ActionCreate,
+		Body:   jsonData,
+	})
 }
 
 func (s *personClient) UpdatePerson(ctx context.Context, id uint64, lastName, firstName string) error {
-	_, err := s.client.UpdatePerson(ctx, &pb.UpdatePersonRequest{
-		Id:        id,
+	jsonData, _ := json.Marshal(&PersonDto{
+		ID:        id,
 		LastName:  lastName,
 		FirstName: firstName,
 	})
 
-	return err
+	return s.broker.Publish(ctx, &broker.Message{
+		Topic:  s.cfg.Kafka.IncomeTopic,
+		Action: entity.ActionUpdate,
+		Body:   jsonData,
+	})
 }
 
 func (s *personClient) DeletePerson(ctx context.Context, id uint64) error {
-	_, err := s.client.DeletePerson(ctx, &pb.DeletePersonRequest{
-		Id: id,
+	jsonData, _ := json.Marshal(&PersonDto{
+		ID: id,
 	})
 
-	return err
+	return s.broker.Publish(ctx, &broker.Message{
+		Topic:  s.cfg.Kafka.IncomeTopic,
+		Action: entity.ActionDelete,
+		Body:   jsonData,
+	})
 }
 
 func (s *personClient) ListPerson(ctx context.Context, offset, limit uint64, order string) (<-chan *PersonDto, <-chan error) {

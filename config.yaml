@@ -1,15 +1,18 @@
 person_service:
+  app_name: person_service
   port: 8080
   gateway_port: 8081
   storage: postgres
 
 telegram:
+  app_name: telegram_bot
   api_key:
   timeout: 60
   offset: 0
   person_service: 127.0.0.1:8080
   retry_max: 3
   retry_interval_ms: 1000
+  expvar_port: 8000
 
 storage:
   pool_size: 10
@@ -28,3 +31,23 @@ pooler:
   user: postgres
   password: hGrfdsf@URnj
   name: homework
+
+kafka:
+  brokers:
+  - 127.0.0.1:9095
+  - 127.0.0.1:9096
+  - 127.0.0.1:9097
+  income_topic: person_income
+  verify_topic: person_verify
+  error_topic: person_error
+  
+person_consumer:
+  app_name: person_consumer
+  group_name: person_group
+  expvar_port: 8001
+
+verify_consumer:
+  group_name: verify_group
+
+rollback_consumer:
+  group_name: rollback_group
