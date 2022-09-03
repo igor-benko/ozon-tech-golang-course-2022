@@ -22,6 +22,7 @@ type PersonClient interface {
 	UpdatePerson(ctx context.Context, id uint64, lastName, firstName string) error
 	DeletePerson(ctx context.Context, id uint64) error
 	ListPerson(ctx context.Context, offset, limit uint64, order string) (<-chan *PersonDto, <-chan error)
+	ListAllPersons(ctx context.Context, key string, requestType uint32) error
 }
 
 type personClient struct {
@@ -117,4 +118,13 @@ func (s *personClient) ListPerson(ctx context.Context, offset, limit uint64, ord
 	}()
 
 	return ch, errCh
+}
+
+func (s *personClient) ListAllPersons(ctx context.Context, key string, requestType uint32) error {
+	_, err := s.client.ListAllPersons(ctx, &pb.ListAllPersonsRequest{
+		RequestType: pb.RequestType(requestType),
+		Key:         key,
+	})
+
+	return err
 }

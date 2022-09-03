@@ -18,4 +18,5 @@ type CommandHandler interface {
 	Update(ctx context.Context, args ...string) string
 	Delete(ctx context.Context, args ...string) string
 	List(ctx context.Context, args ...string) string
+	ListAll(ctx context.Context, args ...string) string
 }

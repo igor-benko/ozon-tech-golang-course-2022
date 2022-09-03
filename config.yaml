@@ -3,6 +3,7 @@ person_service:
   port: 8080
   gateway_port: 8081
   storage: postgres
+  expvar_port: 8003
 
 telegram:
   app_name: telegram_bot
@@ -51,3 +52,9 @@ verify_consumer:
 
 rollback_consumer:
   group_name: rollback_group
+
+cache:
+  host: localhost
+  port: 6379
+  expire_ms: 10000
+  channel: data_channel

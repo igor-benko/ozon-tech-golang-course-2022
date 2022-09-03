@@ -12,10 +12,12 @@ import (
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/commander"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/broker/kafka"
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/cache"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/client"
 	"google.golang.org/grpc"
 
 	"github.com/Shopify/sarama"
+	"github.com/go-redis/redis/v9"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -42,6 +44,10 @@ func Run(ctx context.Context, cfg config.Config) {
 	}
 
 	defer closer.Close()
+
+	// Инициализация кэша
+	cache, cacheClose := initCache(cfg)
+	defer cacheClose()
 
 	// Инициализация сервисов
 	retry_opts := []grpc_retry.CallOption{
@@ -82,7 +88,7 @@ func Run(ctx context.Context, cfg config.Config) {
 	personClient := client.NewPersonClient(cfg, personService, broker)
 
 	// Инициализация обработчиков команд
-	personHandler := commander.NewPersonHandler(personClient)
+	personHandler := commander.NewPersonHandler(personClient, cache)
 
 	// Запуск бота
 	commander := commander.NewCommander(bot, personHandler, cfg)
@@ -137,4 +143,16 @@ func initTracing(cfg config.Config) (io.Closer, error) {
 	}
 
 	return c.InitGlobalTracer(cfg.Telegram.AppName)
+}
+
+type CloserWithErr func() error
+
+func initCache(cfg config.Config) (cache.CacheClient, CloserWithErr) {
+	client := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", cfg.Cache.Host, cfg.Cache.Port),
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+
+	return cache.NewRedisCache(cfg, client), client.Close
 }

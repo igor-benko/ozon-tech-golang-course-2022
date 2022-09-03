@@ -35,6 +35,11 @@ service PersonService {
             get: "/v1/persons"
         };
     }
+    rpc ListAllPersons(ListAllPersonsRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            get: "/v1/all_persons"
+        };
+    }
 }
 
 // Entity
@@ -87,4 +92,15 @@ message ListPersonRequest {
 message ListPersonResponse {
     repeated Person persons = 1;
     uint64 total = 2;
+}
+
+// List all persons
+enum RequestType {
+    PUBSUB = 0;
+    RETRY = 1;
+}
+
+message ListAllPersonsRequest {
+    RequestType request_type = 1;
+    string key = 2;
 }

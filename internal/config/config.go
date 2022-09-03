@@ -22,6 +22,7 @@ type Config struct {
 	Pooler           PoolerConfig           `yaml:"pooler"`
 	Database         DatabaseConfig         `yaml:"database"`
 	Kafka            KafkaConfig            `yaml:"kafka"`
+	Cache            CacheConfig            `yaml:"cache"`
 }
 
 type PersonServiceConfig struct {
@@ -29,6 +30,7 @@ type PersonServiceConfig struct {
 	Port        int    `yaml:"port" env:"PERSON_SERVICE_PORT"`
 	GatewayPort int    `yaml:"gateway_port" env:"PERSON_SERVICE_GATEWAY_PORT"`
 	Storage     string `yaml:"storage" env:"PERSON_SERVICE_STORAGE"`
+	ExpvarPort  int    `yaml:"expvar_port" env:"PERSON_SERVICE_EXPVAR_PORT"`
 }
 
 type PersonConsumerConfig struct {
@@ -82,6 +84,13 @@ type KafkaConfig struct {
 	IncomeTopic string   `yaml:"income_topic" env:"KAFKA_INCOME_TOPIC"`
 	VerifyTopic string   `yaml:"verify_topic" env:"KAFKA_VERIFY_TOPIC"`
 	ErrorTopic  string   `yaml:"error_topic" env:"KAFKA_ERROR_TOPIC"`
+}
+
+type CacheConfig struct {
+	Host     string `yaml:"host" env:"CACHE_HOST"`
+	Port     int    `yaml:"port" env:"CACHE_PORT"`
+	ExpireMs uint64 `yaml:"expire_ms" env:"CACHE_EXPIRE_MS"`
+	Channel  string `yaml:"channel" env:"CACHE_CHANNEL"`
 }
 
 func Init() (*Config, error) {

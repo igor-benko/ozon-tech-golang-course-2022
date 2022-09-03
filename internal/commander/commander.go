@@ -81,6 +81,8 @@ func handleAction(ctx context.Context, h CommandHandler, args ...string) string 
 		return h.Delete(ctx, args...)
 	case "list":
 		return h.List(ctx, args...)
+	case "list_all":
+		return h.ListAll(ctx, args...)
 	}
 
 	return "Неподдерживаемая команда"

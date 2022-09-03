@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"expvar"
 	"fmt"
 	"io"
 	"log"
@@ -10,8 +11,18 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
+	redis "github.com/go-redis/redis/v9"
+	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/opentracing/opentracing-go"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/uber/jaeger-client-go"
+	jaegercfg "github.com/uber/jaeger-client-go/config"
 	"gitlab.ozon.dev/igor.benko.1991/homework/docs"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/cache"
 	repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository"
 	memory_repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository/memory"
 	postgres_repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository/postgres"
@@ -21,17 +32,6 @@ import (
 	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/postgres"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-
-	"github.com/gin-gonic/gin"
-	grpc_opentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/opentracing/opentracing-go"
-
-	"github.com/uber/jaeger-client-go"
-	jaegercfg "github.com/uber/jaeger-client-go/config"
-
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 const (
@@ -50,8 +50,12 @@ func Run(ctx context.Context, cfg config.Config) {
 	repos, close := initRepo(cfg)
 	defer close()
 
+	// Инициализация кэша
+	cache, cacheClose := initCache(cfg)
+	defer cacheClose()
+
 	// Инициализация сервиса
-	personService := service.NewPersonService(repos.person, repos.vehicle, cfg)
+	personService := service.NewPersonService(repos.person, repos.vehicle, cache, cfg)
 	vehicleService := service.NewVehicleService(repos.vehicle, cfg)
 
 	// GRPC
@@ -95,6 +99,15 @@ func Run(ctx context.Context, cfg config.Config) {
 		}
 	}()
 
+	expvarServer := createExpvarServer(cfg.PersonService.ExpvarPort)
+	go func() {
+		defer cancel()
+		logger.Infof("Grpc gateway started!")
+		if err := expvarServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Errorf(err.Error())
+		}
+	}()
+
 	// Так называемый, gracefull shutdown
 
 	<-ctx.Done()
@@ -105,6 +118,12 @@ func Run(ctx context.Context, cfg config.Config) {
 	defer cancel()
 
 	if err := gatewayServer.Shutdown(ctx); err != nil {
+		log.Printf("Error on gatewayServer stop: %s\n", err)
+	} else {
+		logger.Infof("gatewayServer stopped")
+	}
+
+	if err := expvarServer.Shutdown(ctx); err != nil {
 		log.Printf("Error on gatewayServer stop: %s\n", err)
 	} else {
 		logger.Infof("gatewayServer stopped")
@@ -197,4 +216,26 @@ func initRepo(cfg config.Config) (Repos, Closer) {
 		person:  memory_repo.NewPersonRepo(cfg.Storage),
 		vehicle: memory_repo.NewVehicleRepo(cfg.Storage),
 	}, NoCloser
+}
+
+type CloserWithErr func() error
+
+func initCache(cfg config.Config) (cache.CacheClient, CloserWithErr) {
+	client := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", cfg.Cache.Host, cfg.Cache.Port),
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+
+	return cache.NewRedisCache(cfg, client), client.Close
+}
+
+func createExpvarServer(port int) *http.Server {
+	mux := http.NewServeMux()
+	mux.Handle("/stats", expvar.Handler())
+
+	return &http.Server{
+		Addr:    fmt.Sprintf(":%d", port),
+		Handler: mux,
+	}
 }

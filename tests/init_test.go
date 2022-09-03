@@ -7,8 +7,10 @@ import (
 	"net"
 	"sync"
 
+	"github.com/go-redis/redis/v9"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/cache"
 	repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository"
 	memory_repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository/memory"
 	postgres_repo "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository/postgres"
@@ -55,8 +57,10 @@ func init() {
 		log.Fatalf("Unsupported storage type %s", cfg.PersonService.Storage)
 	}
 
+	cache, _ := initCache(*cfg)
+
 	// Инициализация сервиса
-	ps := service.NewPersonService(personRepo, vehicleRepo, *cfg)
+	ps := service.NewPersonService(personRepo, vehicleRepo, cache, *cfg)
 	vs := service.NewVehicleService(vehicleRepo, *cfg)
 
 	personService = &ps
@@ -94,4 +98,16 @@ func tearDownPool() {
 	}
 
 	m.Unlock()
+}
+
+type CloserWithErr func() error
+
+func initCache(cfg config.Config) (cache.CacheClient, CloserWithErr) {
+	client := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%d", cfg.Cache.Host, cfg.Cache.Port),
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+
+	return cache.NewRedisCache(cfg, client), client.Close
 }

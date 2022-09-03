@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"gitlab.ozon.dev/igor.benko.1991/homework/internal/config"
+	"gitlab.ozon.dev/igor.benko.1991/homework/internal/pkg/cache"
 	storage "gitlab.ozon.dev/igor.benko.1991/homework/internal/repository"
 	"gitlab.ozon.dev/igor.benko.1991/homework/pkg/logger"
 )
@@ -32,8 +33,9 @@ func setUpPersonServiceFixture(t *testing.T) personServiceFixture {
 	ctrl := gomock.NewController(t)
 	personRepo := storage.NewMockPersonRepo(ctrl)
 	vehicleRepo := storage.NewMockVehicleRepo(ctrl)
+	cache := cache.NewMockCacheClient(ctrl)
 
-	service := NewPersonService(personRepo, vehicleRepo, *cfg)
+	service := NewPersonService(personRepo, vehicleRepo, cache, *cfg)
 
 	return personServiceFixture{
 		Ctx: ctx,

@@ -28,6 +28,7 @@ type PersonServiceClient interface {
 	DeletePerson(ctx context.Context, in *DeletePersonRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetPerson(ctx context.Context, in *GetPersonRequest, opts ...grpc.CallOption) (*GetPersonResponse, error)
 	ListPerson(ctx context.Context, in *ListPersonRequest, opts ...grpc.CallOption) (PersonService_ListPersonClient, error)
+	ListAllPersons(ctx context.Context, in *ListAllPersonsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type personServiceClient struct {
@@ -106,6 +107,15 @@ func (x *personServiceListPersonClient) Recv() (*Person, error) {
 	return m, nil
 }
 
+func (c *personServiceClient) ListAllPersons(ctx context.Context, in *ListAllPersonsRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/ozon.dev.homework.api.PersonService/ListAllPersons", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PersonServiceServer is the server API for PersonService service.
 // All implementations must embed UnimplementedPersonServiceServer
 // for forward compatibility
@@ -115,6 +125,7 @@ type PersonServiceServer interface {
 	DeletePerson(context.Context, *DeletePersonRequest) (*emptypb.Empty, error)
 	GetPerson(context.Context, *GetPersonRequest) (*GetPersonResponse, error)
 	ListPerson(*ListPersonRequest, PersonService_ListPersonServer) error
+	ListAllPersons(context.Context, *ListAllPersonsRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedPersonServiceServer()
 }
 
@@ -136,6 +147,9 @@ func (UnimplementedPersonServiceServer) GetPerson(context.Context, *GetPersonReq
 }
 func (UnimplementedPersonServiceServer) ListPerson(*ListPersonRequest, PersonService_ListPersonServer) error {
 	return status.Errorf(codes.Unimplemented, "method ListPerson not implemented")
+}
+func (UnimplementedPersonServiceServer) ListAllPersons(context.Context, *ListAllPersonsRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListAllPersons not implemented")
 }
 func (UnimplementedPersonServiceServer) mustEmbedUnimplementedPersonServiceServer() {}
 
@@ -243,6 +257,24 @@ func (x *personServiceListPersonServer) Send(m *Person) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _PersonService_ListAllPersons_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAllPersonsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PersonServiceServer).ListAllPersons(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ozon.dev.homework.api.PersonService/ListAllPersons",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PersonServiceServer).ListAllPersons(ctx, req.(*ListAllPersonsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PersonService_ServiceDesc is the grpc.ServiceDesc for PersonService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -265,6 +297,10 @@ var PersonService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPerson",
 			Handler:    _PersonService_GetPerson_Handler,
+		},
+		{
+			MethodName: "ListAllPersons",
+			Handler:    _PersonService_ListAllPersons_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
