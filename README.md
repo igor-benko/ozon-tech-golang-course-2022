@@ -1,33 +1,36 @@
-# Запуск
-В файле config.yaml укажите телеграм API_KEY и настройки портов для GRPC и Gateway серверов
+# Ozon Tech Golang School Homework
+This repo contains homework from Route256 course from Ozon Tech
 
-Затем вызов "make run-server" - сборка и запуск GRPC сервера
-Затем вызов "make run-bot" - сборка и запуск бота
+## Startup
+Put API_KEY and port settings for GRPC and Gateway servers into config.yaml file
 
-# Поддерживаемый список команд
+"make run-server" - buildand run GRPC server
+"make run-bot" - build and run bot
 
-Создание персоны
+## Supported bot commands
+
+Create person
 /person create {LastName} {FirstName}
 
-Обновление персоны
+Update person
 /person update {personID} {LastName} {FirstName}
 
-Удаление персоны
+Delete person
 /person delete {personID}
 
-Список персон
+Person list
 /person list
 
 
-Для GRPC
-Создание персоны
+For GRPC
+Create person
 POST http://localhost:xxxx/v1/persons
 {
     "lastName": "A",
     "firstName": "B"
 }
 
-Обновление персоны
+Update person
 PUT http://localhost:xxxx/v1/persons
 {
     "id": 1,
@@ -35,18 +38,18 @@ PUT http://localhost:xxxx/v1/persons
     "firstName": "B"
 }
 
-Удаление персоны
+Delete person
 DELETE http://localhost:xxxx/v1/persons/{id}
 
-Список персон
+Person list
 GET http://localhost:xxxx/v1/persons
 
 Swagger
 http://localhost:xxxx/swagger/index.html
 
-# Архитектура
+## Project structure
 
-- entity - содержит бизнес сущности
-- service - сервисы
-- handlers - обработчики телеграм команд (одна сущность - один хэндлер)
-- storage - хранилище (in-memory)
+- entity
+- service
+- handlers
+- storage
